@@ -73,6 +73,11 @@ export function showConfirm(msg, isDestructive = true) {
 // Changement d'Écran
 const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
 export function switchScreen(screenId) {
+    // --- NOUVEAU : ENREGISTRER L'ÉCRAN DANS L'HISTORIQUE ---
+    // On vérifie si l'état actuel de l'historique n'est pas déjà sur cet écran (pour éviter les doublons)
+    if (history.state?.screen !== screenId) {
+        history.pushState({ screen: screenId }, "", `#${screenId}`);
+    }
     SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`)?.classList.add('hidden');
         const navBtn = document.getElementById(`nav-${s}`);
@@ -353,6 +358,50 @@ function init() {
     routeUser();
     refreshIcons();
 }
+// --- GESTION DU BOUTON RETOUR (API HISTORY) ---
+window.addEventListener('popstate', (event) => {
+    // Si l'historique contient un écran spécifique, on y va
+    if (event.state && event.state.screen) {
+        // On passe un second paramètre optionnel (false) pour ne pas ré-enregistrer l'histoire à l'envers
+        switchScreenFromHistory(event.state.screen);
+    } else {
+        // Fallback : si on revient au tout début, on applique la logique de routage de base
+        routeUser();
+    }
+});
 
+// Une version légère de switchScreen dédiée à l'historique pour éviter les boucles infinies
+function switchScreenFromHistory(screenId) {
+    // On copie la logique visuelle de switchScreen sans faire de history.pushState
+    const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
+    SCREENS.forEach(s => {
+        document.getElementById(`screen-${s}`)?.classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${s}`);
+        if (navBtn) navBtn.className = "nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+    });
+    
+    document.getElementById(`screen-${screenId}`)?.classList.remove('hidden');
+    const activeNav = document.getElementById(`nav-${screenId}`);
+    if (activeNav) activeNav.className = "nav-btn flex flex-col items-center justify-center gap-1 text-emerald-400 font-bold transition-all cursor-pointer";
+
+    const profileBtn = document.getElementById('btn-edit-profile');
+    if (profileBtn) {
+        if (screenId === 'onboarding') profileBtn.classList.add('hidden');
+        else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
+    }
+
+    const backupSection = document.getElementById('backup-section');
+    if (backupSection) {
+        if (AppState.profileConfigured && screenId !== 'onboarding') backupSection.classList.remove('hidden');
+        else backupSection.classList.add('hidden');
+    }
+
+    // Rendu des composants
+    if (screenId === 'ingredients') renderIngredients();
+    if (screenId === 'products') renderProducts();
+    if (screenId === 'margins') populateMarginDropdown();
+    if (screenId === 'planner') populatePlannerInputs();
+    refreshIcons();
+}
 // Lancement de l'application
 document.addEventListener('DOMContentLoaded', init);
