@@ -71,7 +71,7 @@ export function showConfirm(msg, isDestructive = true) {
 }
 
 // Changement d'Écran
-const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner'];
+const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
 export function switchScreen(screenId) {
     SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`)?.classList.add('hidden');
@@ -115,13 +115,59 @@ function setupGlobalEvents() {
 
     const editProfileBtn = document.getElementById('btn-edit-profile');
     if (editProfileBtn) {
-        editProfileBtn.addEventListener('click', async () => {
+        editProfileBtn.addEventListener('click', () => {
+            // 1. Récupérer le nom actuel du commerce stocké (ajuste selon ta clé exacte dans AppState)
+            const currentShopName = AppState.shopName || localStorage.getItem('margot_shop_name') || "";
+            
+            // 2. Pré-remplir le champ de saisie de notre nouvel écran
+            const inputShop = document.getElementById('settings-shop-name');
+            if (inputShop) inputShop.value = currentShopName;
+            
+            // 3. Basculer sur l'écran des paramètres de manière fluide
+            switchScreen('settings');
+        });
+    }
+
+    // --- NOUVEAU : ÉCOUTEUR POUR ENREGISTRER LES MODIFICATIONS ---
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    if (btnSaveSettings) {
+        btnSaveSettings.addEventListener('click', () => {
+            const newShopName = document.getElementById('settings-shop-name')?.value.trim();
+            
+            if (!newShopName) {
+                alert("Le nom du commerce ne peut pas être vide.");
+                return;
+            }
+
+            // Mettre à jour le nom dans l'état et le localStorage de manière non-destructive
+            if (typeof AppState.setShopName === 'function') {
+                AppState.setShopName(newShopName);
+            } else {
+                AppState.shopName = newShopName;
+                localStorage.setItem('margot_shop_name', newShopName);
+            }
+
+            // Optionnel : Mettre à jour dynamiquement un titre s'il y en a un sur ton app
+            const headerTitle = document.getElementById('app-header-title');
+            if (headerTitle) headerTitle.textContent = newShopName;
+
+            showToast('Profil mis à jour !');
+            
+            // Rediriger l'utilisateur vers son tableau de bord de produits
+            switchScreen('products');
+        });
+    }
+    // --- NOUVEAU : RÉINITIALISATION TOTALE ET DESTRUCTIVE ---
+    const btnDangerReset = document.getElementById('btn-danger-reset');
+    if (btnDangerReset) {
+        btnDangerReset.addEventListener('click', async () => {
             const confirmReset = await showConfirm(
-                "Êtes-vous sûr de vouloir réinitialiser votre profil ? Vos préférences et fiches actuelles seront effacées.", 
+                "🚨 ATTENTION : Vous allez supprimer DÉFINITIVEMENT votre profil, toutes vos fiches techniques et vos ingrédients. Cette action est irréversible. Continuer ?", 
                 true
             );
 
             if (confirmReset) {
+                // 1. On remet le profil à zéro dans l'état et le stockage
                 if (typeof AppState.setProfileConfigured === 'function') {
                     AppState.setProfileConfigured(false);
                 } else {
@@ -129,15 +175,21 @@ function setupGlobalEvents() {
                     localStorage.setItem('margot_profile_done', 'false');
                 }
                 
-                // --- ON CACHE LES ÉLÉMENTS DE NAVIGATION ET DE SAUVEGARDE ---
+                // 2. SÉCURITÉ NETTOYAGE : On efface TOUTES les données de l'artisan
+                localStorage.removeItem(LOCAL_STORAGE_KEYS.ingredients);
+                localStorage.removeItem(LOCAL_STORAGE_KEYS.products);
+                localStorage.removeItem('margot_shop_name'); // Nettoie aussi le nom si stocké à part
+
+                // 3. On masque les menus et la section sauvegarde
                 document.getElementById('app-nav')?.classList.add('hidden');
-                document.getElementById('backup-section')?.classList.add('hidden'); // <-- AJOUTE CETTE LIGNE
+                document.getElementById('backup-section')?.classList.add('hidden');
                 
+                // 4. On renvoie à la case départ (onboarding étape 1)
                 switchScreen('onboarding');
                 showOnboardingStep(1);
                 initSwipeCommerce();
                 
-                showToast('Profil réinitialisé');
+                showToast('Application remise à zéro');
                 refreshIcons();
             }
         });
