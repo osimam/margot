@@ -89,6 +89,16 @@ export function switchScreen(screenId) {
         else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
     }
 
+    // --- LE COMPORTEMENT DE LA SAUVEGARDE SYNCHRONISÉ ICI ---
+    const backupSection = document.getElementById('backup-section');
+    if (backupSection) {
+        if (AppState.profileConfigured && screenId !== 'onboarding') {
+            backupSection.classList.remove('hidden');
+        } else {
+            backupSection.classList.add('hidden');
+        }
+    }
+
     // Déclenchement des rendus selon l'écran actif
     if (screenId === 'ingredients') renderIngredients();
     if (screenId === 'products') renderProducts();
@@ -112,7 +122,6 @@ function setupGlobalEvents() {
             );
 
             if (confirmReset) {
-                // Utilisation de la méthode du Store si elle existe, ou fallback localStorage unifié
                 if (typeof AppState.setProfileConfigured === 'function') {
                     AppState.setProfileConfigured(false);
                 } else {
@@ -120,7 +129,9 @@ function setupGlobalEvents() {
                     localStorage.setItem('margot_profile_done', 'false');
                 }
                 
+                // --- ON CACHE LES ÉLÉMENTS DE NAVIGATION ET DE SAUVEGARDE ---
                 document.getElementById('app-nav')?.classList.add('hidden');
+                document.getElementById('backup-section')?.classList.add('hidden'); // <-- AJOUTE CETTE LIGNE
                 
                 switchScreen('onboarding');
                 showOnboardingStep(1);
@@ -135,11 +146,17 @@ function setupGlobalEvents() {
 
 // --- LOGIQUE DE ROUTAGE ---
 function routeUser() {
+    const backupSection = document.getElementById('backup-section');
+
     if (AppState.profileConfigured) {
+        // L'utilisateur a déjà configuré son profil
         document.getElementById('app-nav')?.classList.remove('hidden');
+        backupSection?.classList.remove('hidden'); // <-- Affiche les boutons de sauvegarde
         switchScreen('products');
     } else {
+        // L'utilisateur est sur l'écran de paramétrage (onboarding)
         document.getElementById('app-nav')?.classList.add('hidden');
+        backupSection?.classList.add('hidden'); // <-- Cache les boutons de sauvegarde
         switchScreen('onboarding');
         showOnboardingStep(1);
         initSwipeCommerce();

@@ -39,17 +39,17 @@
                     <p class="text-xs text-slate-400">Vos données sont stockées localement sur cet appareil et ne transitent jamais sur Internet.</p>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="btn-export-backup" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Sauvegarder (Exporter)</span>
-                    </button>
-                    
-                    <button id="btn-trigger-import" class="bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 border border-slate-600/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
-                        <i data-lucide="upload" class="w-4 h-4"></i>
-                        <span>Restaurer (Importer)</span>
-                    </button>
-                </div>
+                <div id="backup-section" class="grid grid-cols-2 gap-3 hidden">
+    <button id="btn-export-backup" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Sauvegarder (Exporter)</span>
+    </button>
+    
+    <button id="btn-trigger-import" class="bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 border border-slate-600/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+        <i data-lucide="upload" class="w-4 h-4"></i>
+        <span>Restaurer (Importer)</span>
+    </button>
+</div>
                 <input type="file" id="input-import-file" accept=".json" class="hidden">
             </div>
         </div>
