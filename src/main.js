@@ -70,11 +70,26 @@ export function showConfirm(msg, isDestructive = true) {
     });
 }
 
+// --- MISE À JOUR DISCRETE DU NOM DU COMMERCE ---
+export function updateHeaderShopName() {
+    const shopNameElement = document.getElementById('app-shop-name');
+    if (shopNameElement) {
+        const shopName = AppState.shopName || localStorage.getItem('margot_shop_name');
+        
+        if (shopName && AppState.profileConfigured) {
+            shopNameElement.textContent = `• ${shopName}`;
+            shopNameElement.classList.remove('hidden');
+        } else {
+            shopNameElement.textContent = "";
+            shopNameElement.classList.add('hidden');
+        }
+    }
+}
+
 // Changement d'Écran
 const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
 export function switchScreen(screenId) {
     // --- NOUVEAU : ENREGISTRER L'ÉCRAN DANS L'HISTORIQUE ---
-    // On vérifie si l'état actuel de l'historique n'est pas déjà sur cet écran (pour éviter les doublons)
     if (history.state?.screen !== screenId) {
         history.pushState({ screen: screenId }, "", `#${screenId}`);
     }
@@ -106,7 +121,10 @@ export function switchScreen(screenId) {
 
     // Déclenchement des rendus selon l'écran actif
     if (screenId === 'ingredients') renderIngredients();
-    if (screenId === 'products') renderProducts();
+    if (screenId === 'products') {
+        renderProducts();
+        updateHeaderShopName(); // Mise à jour dynamique à la fin de l'onboarding / clic menu
+    }
     if (screenId === 'margins') populateMarginDropdown();
     if (screenId === 'planner') populatePlannerInputs();
     refreshIcons();
@@ -121,14 +139,9 @@ function setupGlobalEvents() {
     const editProfileBtn = document.getElementById('btn-edit-profile');
     if (editProfileBtn) {
         editProfileBtn.addEventListener('click', () => {
-            // 1. Récupérer le nom actuel du commerce stocké (ajuste selon ta clé exacte dans AppState)
             const currentShopName = AppState.shopName || localStorage.getItem('margot_shop_name') || "";
-            
-            // 2. Pré-remplir le champ de saisie de notre nouvel écran
             const inputShop = document.getElementById('settings-shop-name');
             if (inputShop) inputShop.value = currentShopName;
-            
-            // 3. Basculer sur l'écran des paramètres de manière fluide
             switchScreen('settings');
         });
     }
@@ -144,7 +157,6 @@ function setupGlobalEvents() {
                 return;
             }
 
-            // Mettre à jour le nom dans l'état et le localStorage de manière non-destructive
             if (typeof AppState.setShopName === 'function') {
                 AppState.setShopName(newShopName);
             } else {
@@ -152,16 +164,16 @@ function setupGlobalEvents() {
                 localStorage.setItem('margot_shop_name', newShopName);
             }
 
-            // Optionnel : Mettre à jour dynamiquement un titre s'il y en a un sur ton app
             const headerTitle = document.getElementById('app-header-title');
             if (headerTitle) headerTitle.textContent = newShopName;
 
+            updateHeaderShopName(); // Changement immédiat du nom statique dans le header
+
             showToast('Profil mis à jour !');
-            
-            // Rediriger l'utilisateur vers son tableau de bord de produits
             switchScreen('products');
         });
     }
+
     // --- NOUVEAU : RÉINITIALISATION TOTALE ET DESTRUCTIVE ---
     const btnDangerReset = document.getElementById('btn-danger-reset');
     if (btnDangerReset) {
@@ -172,7 +184,6 @@ function setupGlobalEvents() {
             );
 
             if (confirmReset) {
-                // 1. On remet le profil à zéro dans l'état et le stockage
                 if (typeof AppState.setProfileConfigured === 'function') {
                     AppState.setProfileConfigured(false);
                 } else {
@@ -180,16 +191,15 @@ function setupGlobalEvents() {
                     localStorage.setItem('margot_profile_done', 'false');
                 }
                 
-                // 2. SÉCURITÉ NETTOYAGE : On efface TOUTES les données de l'artisan
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.ingredients);
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.products);
-                localStorage.removeItem('margot_shop_name'); // Nettoie aussi le nom si stocké à part
+                localStorage.removeItem('margot_shop_name');
 
-                // 3. On masque les menus et la section sauvegarde
                 document.getElementById('app-nav')?.classList.add('hidden');
                 document.getElementById('backup-section')?.classList.add('hidden');
                 
-                // 4. On renvoie à la case départ (onboarding étape 1)
+                updateHeaderShopName(); // Nettoie et masque le nom statique
+
                 switchScreen('onboarding');
                 showOnboardingStep(1);
                 initSwipeCommerce();
@@ -206,14 +216,15 @@ function routeUser() {
     const backupSection = document.getElementById('backup-section');
 
     if (AppState.profileConfigured) {
-        // L'utilisateur a déjà configuré son profil
         document.getElementById('app-nav')?.classList.remove('hidden');
-        backupSection?.classList.remove('hidden'); // <-- Affiche les boutons de sauvegarde
+        backupSection?.classList.remove('hidden');
+        
+        updateHeaderShopName(); // Affiche le nom dès le démarrage de l'app si configuré
+        
         switchScreen('products');
     } else {
-        // L'utilisateur est sur l'écran de paramétrage (onboarding)
         document.getElementById('app-nav')?.classList.add('hidden');
-        backupSection?.classList.add('hidden'); // <-- Cache les boutons de sauvegarde
+        backupSection?.classList.add('hidden');
         switchScreen('onboarding');
         showOnboardingStep(1);
         initSwipeCommerce();
@@ -281,12 +292,10 @@ function initBackupSystem() {
             try {
                 const json = JSON.parse(e.target.result);
                 
-                // 1. SÉCURITÉ : Vérification de la structure globale du fichier
                 if (!json.data || !json.data.ingredients || !json.data.products) {
                     throw new Error("Format de fichier invalide : sections manquantes.");
                 }
 
-                // SÉCURITÉ : Vérification que les données critiques sont bien des listes (Arrays)
                 if (!Array.isArray(json.data.ingredients) || !Array.isArray(json.data.products)) {
                     throw new Error("Format de fichier corrompu : les données doivent être des tableaux.");
                 }
@@ -297,27 +306,23 @@ function initBackupSystem() {
                 );
 
                 if (confirmOverwrite) {
-                    // 2. SÉCURITÉ : Fonction de nettoyage (Sanitizer) anti-injection XSS
                     const sanitize = (str) => {
                         if (typeof str !== 'string') return str;
                         return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     };
 
-                    // Nettoyage complet de la liste des ingrédients
                     const cleanIngredients = json.data.ingredients.map(ing => ({
                         ...ing,
                         name: sanitize(ing.name),
                         unit: sanitize(ing.unit)
                     }));
 
-                    // Nettoyage complet de la liste des produits
                     const cleanProducts = json.data.products.map(prod => ({
                         ...prod,
                         name: sanitize(prod.name),
                         category: sanitize(prod.category)
                     }));
 
-                    // 3. SÉCURITÉ : Tentative d'écriture avec gestion d'un LocalStorage saturé
                     try {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.ingredients, JSON.stringify(cleanIngredients));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.products, JSON.stringify(cleanProducts));
@@ -340,12 +345,10 @@ function initBackupSystem() {
 
 // --- FONCTION D'INITIALISATION GLOBALE ---
 function init() {
-    // 1. Liaison globale pour court-circuiter les imports circulaires de onboarding.js
     window.switchScreen = switchScreen;
     window.showToast = showToast;
     window.refreshIcons = refreshIcons;
 
-    // 2. Initialisation des composants et événements
     initOnboarding();
     initIngredientsEvents();
     initProductsEvents();
@@ -354,25 +357,20 @@ function init() {
     setupGlobalEvents();
     initBackupSystem();
     
-    // 3. Routage de l'utilisateur
     routeUser();
     refreshIcons();
 }
+
 // --- GESTION DU BOUTON RETOUR (API HISTORY) ---
 window.addEventListener('popstate', (event) => {
-    // Si l'historique contient un écran spécifique, on y va
     if (event.state && event.state.screen) {
-        // On passe un second paramètre optionnel (false) pour ne pas ré-enregistrer l'histoire à l'envers
         switchScreenFromHistory(event.state.screen);
     } else {
-        // Fallback : si on revient au tout début, on applique la logique de routage de base
         routeUser();
     }
 });
 
-// Une version légère de switchScreen dédiée à l'historique pour éviter les boucles infinies
 function switchScreenFromHistory(screenId) {
-    // On copie la logique visuelle de switchScreen sans faire de history.pushState
     const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
     SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`)?.classList.add('hidden');
@@ -396,12 +394,15 @@ function switchScreenFromHistory(screenId) {
         else backupSection.classList.add('hidden');
     }
 
-    // Rendu des composants
     if (screenId === 'ingredients') renderIngredients();
-    if (screenId === 'products') renderProducts();
+    if (screenId === 'products') {
+        renderProducts();
+        updateHeaderShopName(); // Maintient l'affichage synchrone sur l'historique retour
+    }
     if (screenId === 'margins') populateMarginDropdown();
     if (screenId === 'planner') populatePlannerInputs();
     refreshIcons();
 }
+
 // Lancement de l'application
 document.addEventListener('DOMContentLoaded', init);
