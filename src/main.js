@@ -207,8 +207,14 @@ function initBackupSystem() {
             try {
                 const json = JSON.parse(e.target.result);
                 
+                // 1. SÉCURITÉ : Vérification de la structure globale du fichier
                 if (!json.data || !json.data.ingredients || !json.data.products) {
-                    throw new Error("Format de fichier invalide.");
+                    throw new Error("Format de fichier invalide : sections manquantes.");
+                }
+
+                // SÉCURITÉ : Vérification que les données critiques sont bien des listes (Arrays)
+                if (!Array.isArray(json.data.ingredients) || !Array.isArray(json.data.products)) {
+                    throw new Error("Format de fichier corrompu : les données doivent être des tableaux.");
                 }
 
                 const confirmOverwrite = await showConfirm(
@@ -217,15 +223,40 @@ function initBackupSystem() {
                 );
 
                 if (confirmOverwrite) {
-                    localStorage.setItem(LOCAL_STORAGE_KEYS.ingredients, JSON.stringify(json.data.ingredients));
-                    localStorage.setItem(LOCAL_STORAGE_KEYS.products, JSON.stringify(json.data.products));
+                    // 2. SÉCURITÉ : Fonction de nettoyage (Sanitizer) anti-injection XSS
+                    const sanitize = (str) => {
+                        if (typeof str !== 'string') return str;
+                        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    };
+
+                    // Nettoyage complet de la liste des ingrédients
+                    const cleanIngredients = json.data.ingredients.map(ing => ({
+                        ...ing,
+                        name: sanitize(ing.name),
+                        unit: sanitize(ing.unit)
+                    }));
+
+                    // Nettoyage complet de la liste des produits
+                    const cleanProducts = json.data.products.map(prod => ({
+                        ...prod,
+                        name: sanitize(prod.name),
+                        category: sanitize(prod.category)
+                    }));
+
+                    // 3. SÉCURITÉ : Tentative d'écriture avec gestion d'un LocalStorage saturé
+                    try {
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.ingredients, JSON.stringify(cleanIngredients));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.products, JSON.stringify(cleanProducts));
+                    } catch (storageError) {
+                        throw new Error("La mémoire de votre navigateur est saturée. Le fichier est trop lourd.");
+                    }
                     
                     showToast("Données restaurées ! Rechargement...");
                     setTimeout(() => window.location.reload(), 1000);
                 }
             } catch (error) {
                 console.error("Erreur lors de l'import :", error);
-                alert("Le fichier de sauvegarde est corrompu ou invalide.");
+                alert(`Impossible d'importer la sauvegarde : ${error.message || "Fichier corrompu"}`);
             }
             inputImport.value = "";
         };
