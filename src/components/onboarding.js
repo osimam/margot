@@ -128,9 +128,6 @@ export function initSwipeCommerce() {
                 <h3 class="font-black text-xs text-slate-200 tracking-wide">${meta.label}</h3>
                 <p class="text-[10px] text-slate-400 font-medium px-2">Inclut fiches techniques et ingrédients adaptés à votre quotidien.</p>
             </div>
-            <div class="status-badge opacity-40 bg-slate-950 border border-slate-800 text-slate-500 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl transition-all duration-300">
-                Sélectionner
-            </div>
         `;
         card.addEventListener('click', () => {
             card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
