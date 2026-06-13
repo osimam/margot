@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Margot - Pilotage de Rentabilité</title>
+    
+    <link rel="stylesheet" href="./src/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center antialiased font-sans">
+
+    <div class="w-full max-w-md md:max-w-3xl bg-slate-900 min-h-screen flex flex-col relative pb-24 shadow-2xl border-x border-slate-800 transition-all">
+
+        <header class="p-5 border-b border-slate-800/80 bg-slate-900/80 sticky top-0 backdrop-blur-md z-30 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black text-emerald-400 tracking-wide flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-6 h-6 text-emerald-400"></i> Margot
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">Gestion & Marges Artisans</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5">
+                <div class="bg-slate-800 border border-slate-700/60 px-3 py-1 rounded-full text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Production v2.1
+                </div>
+                <button id="btn-edit-profile" class="hidden text-[10px] text-slate-400 hover:text-amber-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer">
+                    <i data-lucide="settings-2" class="w-3 h-3"></i> Modifier mon profil
+                </button>
+            </div>
+        </header>
+
+        <div class="p-4">
+            <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-2xl space-y-4 shadow-md">
+                <div class="space-y-1">
+                    <h4 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                        🔒 Sécurité des données
+                    </h4>
+                    <p class="text-xs text-slate-400">Vos données sont stockées localement sur cet appareil et ne transitent jamais sur Internet.</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-export-backup" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Sauvegarder (Exporter)</span>
+                    </button>
+                    
+                    <button id="btn-trigger-import" class="bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 border border-slate-600/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        <span>Restaurer (Importer)</span>
+                    </button>
+                </div>
+                <input type="file" id="input-import-file" accept=".json" class="hidden">
+            </div>
+        </div>
+
+        <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] hidden" role="status" aria-live="polite">
+            <div class="bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="toast-msg">Enregistré</span>
+            </div>
+        </div>
+
+        <div id="modal-confirm" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+                <p id="confirm-msg" class="text-sm text-slate-200 text-center"></p>
+                <div class="flex gap-2 text-xs font-bold">
+                    <button id="confirm-cancel-btn" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button>
+                    <button id="confirm-action-btn" class="w-1/2 bg-rose-600 text-white py-2.5 rounded-xl cursor-pointer">Confirmer</button>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 p-4 overflow-y-auto space-y-6">
+            
+            <section id="screen-onboarding" class="space-y-6 py-4 animate-fade-in">
+                <div class="text-center space-y-2 px-2">
+                    <span class="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block">
+                        Assistant de rentabilité
+                    </span>
+                    <h2 class="text-2xl font-black text-slate-100 tracking-tight">Ravi de vous rencontrer !</h2>
+                    <p id="onboarding-step-subtitle" class="text-xs text-slate-400 font-medium max-w-[280px] mx-auto">
+                        Étape 1 : Choisissez votre univers métier pour configurer vos outils.
+                    </p>
+                </div>
+
+                <div id="step-box-commerce" class="space-y-4">
+                    <div class="relative w-full overflow-hidden px-1">
+                        <div id="swipe-container" class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 scrollbar-none" style="scrollbar-width: none;"></div>
+                        <div id="swipe-dots" class="flex justify-center items-center gap-2 mt-2"></div>
+                    </div>
+                    
+                    <div class="px-2 pt-2">
+                        <button id="btn-go-products" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-xl text-xs uppercase tracking-wider transition-all duration-300 flex justify-center items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/40 transform active:scale-98">
+                            <span>Continuer vers mes produits</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-white">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0l-6 6m6-6H3" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step-box-products" class="bg-gradient-to-b from-slate-800/60 to-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-4 hidden shadow-xl mx-2">
+                    <label class="flex items-center gap-2 text-xs font-black text-slate-300 uppercase tracking-wider">
+                        <i data-lucide="shopping-bag" class="w-4 h-4 text-emerald-400"></i> 2. Mes Produits par défaut
+                    </label>
+                    <div id="products-checkbox-list" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs"></div>
+                    
+                    <div class="pt-3 border-t border-slate-800 space-y-2">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Un produit manque à la liste ?</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="onboard-custom-product-input" class="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none transition" placeholder="Ex: Bagels spéciaux">
+                            <button type="button" id="btn-add-custom-product" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 px-4 rounded-xl text-xs font-black cursor-pointer transition">Ajouter</button>
+                        </div>
+                        <div id="onboard-custom-products-tags" class="flex flex-wrap gap-1.5 pt-1"></div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2 text-xs font-bold">
+                        <button id="btn-back-to-commerce" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl cursor-pointer transition flex justify-center items-center gap-1 transform active:scale-98">
+                            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 
+                            <span>Retour</span>
+                        </button>
+                        <button id="btn-go-ingredients" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl cursor-pointer transition uppercase tracking-wider shadow-lg shadow-emerald-950/40 flex justify-center items-center gap-2 transform active:scale-98">
+                            <span>Continuer</span> 
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step-box-ingredients" class="bg-gradient-to-b from-slate-800/60 to-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-4 hidden shadow-xl mx-2">
+                    <label class="flex items-center gap-2 text-xs font-black text-slate-300 uppercase tracking-wider">
+                        <i data-lucide="egg" class="w-4 h-4 text-emerald-400"></i> 3. Mes Matières Premières
+                    </label>
+                    <div id="ingredients-checkbox-list" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs"></div>
+                    
+                    <div class="pt-3 border-t border-slate-800 space-y-2">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Ajouter une autre matière :</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="onboard-custom-ing-name" class="col-span-2 bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none transition" placeholder="Ex: Safran">
+                            <select id="onboard-custom-ing-unit" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-bold text-slate-300 focus:outline-none"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="u">u</option></select>
+                        </div>
+                        <button type="button" id="btn-add-custom-ingredient" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 py-2 rounded-xl text-xs font-bold cursor-pointer transition">Ajouter cette matière</button>
+                        <div id="onboard-custom-ingredients-tags" class="flex flex-wrap gap-1.5 pt-1"></div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2 text-xs font-bold">
+                        <button id="btn-back-to-products" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl cursor-pointer transition flex justify-center items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Retour</button>
+                        <button id="btn-finalize-onboarding" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl cursor-pointer transition uppercase tracking-wider shadow-lg shadow-emerald-950/40 flex justify-center items-center gap-2 transform active:scale-98 text-xs">
+                            <span>Générer mon espace</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-ingredients" class="space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <div><h2 class="text-lg font-bold text-slate-100">Mes Matières Premières</h2><p class="text-xs text-slate-400">Mes prix d'achat de base</p></div>
+                    <button id="btn-add-ingredient" class="bg-emerald-600 text-white text-sm font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Ajouter</button>
+                </div>
+                <div id="ingredients-list" class="space-y-2.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0" role="list"></div>
+            </section>
+
+            <section id="screen-products" class="space-y-4 hidden">
+                <div class="flex justify-between items-center">
+                    <div><h2 class="text-lg font-bold text-slate-100">Mon Catalogue Produits</h2><p class="text-xs text-slate-400">Mes coûts de revient et fiches techniques</p></div>
+                    <button id="btn-open-product-modal" class="bg-emerald-600 text-white text-sm font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Créer</button>
+                </div>
+                <div id="products-list" class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0" role="list"></div>
+            </section>
+
+            <section id="screen-margins" class="space-y-4 hidden">
+                <div><h2 class="text-lg font-bold text-slate-100">Mon Simulateur Opérationnel</h2><p class="text-xs text-slate-400">J'ajuste mes prix face à l'inflation</p></div>
+                
+                <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-3">
+                    <label for="margin-product-select" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Sélectionner un produit :</label>
+                    <select id="margin-product-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></select>
+                </div>
+                
+                <div id="simulation-box" class="hidden space-y-4">
+                    <div class="space-y-2 bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl">
+                        <div class="flex justify-between items-center">
+                            <label for="input-pertes-slider" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Marge de sécurité (Pertes / Invendus) :</label>
+                            <span id="pertes-value" class="text-md font-black text-amber-400 font-mono">0%</span>
+                        </div>
+                        <input id="input-pertes-slider" type="range" min="0" max="30" step="5" value="0" class="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                        <button id="btn-mode-a" data-mode="A" class="py-2.5 text-[10px] font-black rounded-lg transition-all cursor-pointer px-1">MODE A : Prix</button>
+                        <button id="btn-mode-b" data-mode="B" class="py-2.5 text-[10px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-1">MODE B : Marge</button>
+                        <button id="btn-mode-c" data-mode="C" class="py-2.5 text-[10px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-1">MODE C : Coeff</button>
+                    </div>
+
+                    <div class="bg-slate-800/40 border border-slate-800 px-4 py-3 rounded-xl flex justify-between items-center">
+                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Coût matière strict :</span>
+                        <span id="sim-cost-display" class="font-mono font-bold text-base text-amber-400">0.00 €</span>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Taux de TVA :</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button data-tva="5.5" class="tva-btn py-2 text-xs font-bold rounded-lg cursor-pointer">5.5 %</button>
+                            <button data-tva="10" class="tva-btn py-2 text-xs font-bold rounded-lg cursor-pointer">10 %</button>
+                            <button data-tva="20" class="tva-btn py-2 text-xs font-bold rounded-lg cursor-pointer">20 %</button>
+                        </div>
+                    </div>
+
+                    <div id="inputs-mode-a" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2">
+                        <label for="input-price-ttc" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Prix de Vente Public TTC (€) :</label>
+                        <input type="number" inputmode="decimal" step="0.01" id="input-price-ttc" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-2xl font-black text-slate-100 text-center font-mono focus:outline-none" placeholder="0.00">
+                    </div>
+
+                    <div id="inputs-mode-b" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2 hidden">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="input-marge-slider" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Objectif de Marge Brute :</label>
+                            <span id="slider-value" class="text-md font-black text-emerald-400 font-mono">70%</span>
+                        </div>
+                        <input type="range" min="0" max="95" value="70" id="input-marge-slider" class="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                    </div>
+
+                    <div id="inputs-mode-c" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2 hidden">
+                        <label for="input-coeff" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Coefficient Multiplicateur Cible :</label>
+                        <input type="number" inputmode="decimal" step="0.1" min="1" value="3.5" id="input-coeff" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-2xl font-black text-slate-100 text-center font-mono focus:outline-none">
+                    </div>
+
+                    <div id="result-card" class="p-5 rounded-2xl border transition-all duration-300"></div>
+                    
+                    <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex justify-center max-h-48">
+                        <canvas id="marginChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-planner" class="space-y-4 hidden">
+                <div><h2 class="text-lg font-bold text-slate-100">Mon Calculateur d'Achats</h2><p class="text-xs text-slate-400">Je prépare mes commandes</p></div>
+                <div id="planner-products-inputs" class="space-y-2.5"></div>
+                <button id="btn-generate-shopping" class="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex justify-center items-center gap-2 text-sm cursor-pointer"><i data-lucide="shopping-basket" class="w-4 h-4"></i> Consolider ma liste</button>
+                <div id="shopping-list-result" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl hidden space-y-3">
+                    <div class="flex justify-between items-center border-b border-slate-700 pb-2 noprint">
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-300">Mes Besoins cumulés :</h3>
+                        <div class="flex gap-2">
+                            <button id="btn-export-pdf" class="bg-slate-700 text-slate-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> PDF</button>
+                            <button id="btn-export-csv" class="bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> CSV</button>
+                        </div>
+                    </div>
+                    <ul id="shopping-items" class="space-y-2" role="list"></ul>
+                </div>
+            </section>
+        </main>
+
+        <nav id="app-nav" class="absolute bottom-0 left-0 right-0 h-20 bg-slate-950 border-t border-slate-800/80 grid grid-cols-4 items-center justify-center px-2 z-40 hidden" role="navigation">
+            <button data-screen="ingredients" id="nav-ingredients" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="wheat" class="w-5 h-5"></i><span class="text-[10px]">Matières</span></button>
+            <button data-screen="products" id="nav-products" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="shopping-bag" class="w-5 h-5"></i><span class="text-[10px]">Produits</span></button>
+            <button data-screen="margins" id="nav-margins" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="trending-up" class="w-5 h-5"></i><span class="text-[10px]">Marges</span></button>
+            <button data-screen="planner" id="nav-planner" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="truck" class="w-5 h-5"></i><span class="text-[10px]">Achats</span></button>
+        </nav>
+
+        <div id="modal-ingredient" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+                <h3 id="modal-ingredient-title" class="text-base font-bold text-slate-100 flex items-center gap-2"></h3>
+                <input type="hidden" id="ing-id-field">
+                <div class="space-y-3 text-xs">
+                    <div><label for="ing-name" class="block text-slate-400 font-medium mb-1">Désignation :</label><input type="text" id="ing-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label for="ing-price" class="block text-slate-400 font-medium mb-1">Prix d'Achat (€) :</label><input type="number" inputmode="decimal" step="0.01" id="ing-price" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-center font-mono focus:outline-none"></div>
+                        <div><label for="ing-qty" class="block text-slate-400 font-medium mb-1">Quantité d'achat :</label><input type="number" inputmode="decimal" step="0.01" id="ing-qty" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-center font-mono focus:outline-none"></div>
+                    </div>
+                    <div>
+                        <label for="ing-unit" class="block text-slate-400 font-medium mb-1">Unité de mesure :</label>
+                        <select id="ing-unit" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="u">u</option></select>
+                    </div>
+                </div>
+                <div class="flex gap-2 text-xs font-bold"><button id="btn-cancel-ingredient" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button><button id="btn-save-ingredient" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer</button></div>
+            </div>
+        </div>
+
+        <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
+                <h3 id="modal-product-title" class="text-base font-bold text-slate-100 flex items-center gap-2"></h3>
+                <input type="hidden" id="product-id-field">
+                <div class="space-y-3 text-xs">
+                    <div><label for="product-name" class="block text-slate-400 font-medium mb-1">Nom du produit :</label><input type="text" id="product-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"></div>
+                    <div class="border-t border-slate-700/80 pt-2"><label class="block text-slate-200 font-bold mb-2 uppercase text-[10px]">Composition :</label><div id="product-ingredients-selector" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div></div>
+                </div>
+                <div class="flex gap-2 text-xs font-bold pt-1"><button id="btn-cancel-product" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button><button id="btn-save-product" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer</button></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

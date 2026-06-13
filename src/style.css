@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+@media print {
+    body * { visibility: hidden; background: white !important; color: black !important; }
+    #shopping-list-result, #shopping-list-result * { visibility: visible; }
+    #shopping-list-result { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+    .noprint { display: none !important; }
+    li { border: 1px solid #ccc !important; color: black !important; background: #f9f9f9 !important; padding: 12px !important; margin-bottom: 8px !important; }
+    b { color: #059669 !important; }
+}
+
+#swipe-container::-webkit-scrollbar {
+    display: none;
+}
+.swipe-card {
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+.swipe-card.active {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.05) !important;
+    box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.2);
+    transform: scale(1.03);
+}
+/* Animation d'apparition fluide */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Surcharge pour l'état actif du swipe-card modernisé */
+.swipe-card {
+    border-color: rgba(30, 41, 59, 0.8) !important;
+}
+
+.swipe-card.active {
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(2, 6, 23, 0.9) 100%) !important;
+    box-shadow: 0 20px 25px -5px rgba(2, 6, 23, 0.6), 0 0 30px -5px rgba(16, 185, 129, 0.15) !important;
+}
+
+.swipe-card.active .icon-box {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    background-color: rgba(16, 185, 129, 0.05) !important;
+    color: #10b981 !important;
+}
+
+.swipe-card.active .icon-box i {
+    transform: scale(1.1);
+}
+
+.swipe-card.active .status-badge {
+    opacity: 1 !important;
+    background-color: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.2) !important;
+    color: #10b981 !important;
+}
+
+/* Amélioration visuelle des listes de cases à cocher */
+#products-checkbox-list label, #ingredients-checkbox-list label {
+    transition: all 0.2s ease;
+}
+#products-checkbox-list label:has(input:checked), #ingredients-checkbox-list label:has(input:checked) {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    background-color: rgba(16, 185, 129, 0.02) !important;
+}
+/* Design dynamique des cartes produits à l'onboarding */
+.product-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Quand la case à cocher à l'intérieur est cochée */
+.product-card:has(.custom-checkbox:checked) {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    background-color: rgba(16, 185, 129, 0.02) !important;
+}
+
+.product-card:has(.custom-checkbox:checked) .product-icon-box {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    background-color: rgba(16, 185, 129, 0.08) !important;
+    color: #10b981 !important;
+}
+
+/* Style de la checkbox revisitée */
+.custom-checkbox {
+    appearance: none;
+    background-color: #020617;
+    border: 1px solid #334155;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    display: inline-grid;
+    place-content: center;
+    position: relative;
+}
+
+.custom-checkbox:checked {
+    background-color: #059669;
+    border-color: #10b981;
+}
+
+.custom-checkbox:checked::before {
+    content: "";
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg) translate(1px, -1px);
+}
+/* Design dynamique des cartes ingrédients à l'onboarding */
+.ingredient-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Quand l'ingrédient est coché */
+.ingredient-card:has(.custom-checkbox:checked) {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    background-color: rgba(16, 185, 129, 0.02) !important;
+}
+
+/* Animation subtile au survol pour inviter au clic */
+.ingredient-card:hover {
+    transform: translateX(2px);
+}
+/* --- CORRECTIF ERGONOMIE GLOBALE (MOBILE & TABLETTE) --- */
+
+/* On rehausse la taille de texte minimale de l'application */
+body {
+  font-size: 16px !important; /* Taille standard lisible sans zoomer */
+}
+
+/* On cible les micros-écritures du HTML pour les passer à une taille humaine */
+.text-\[10px\], .text-\[11px\], .text-xs {
+  font-size: 0.875rem !important; /* Force à 14px minimum (au lieu de 10/11/12px) */
+}
+
+/* On s'assure que les labels importants restent bien visibles */
+label {
+  font-size: 0.875rem !important; /* 14px */
+  letter-spacing: 0.05em;
+}
+
+/* Amélioration des champs de saisie (inputs et selects) */
+input, select, textarea {
+  font-size: 1rem !important; /* 16px : Évite le zoom automatique natif sur iOS/Android */
+  padding-top: 0.875rem !important;
+  padding-bottom: 0.875rem !important;
+}
+
+/* Agrandissement des boutons pour les doigts (zones de clic de 44px minimum recommandées) */
+button {
+  font-size: 0.875rem !important; /* 14px minimum pour le texte des boutons */
+  padding-top: 0.875rem !important;
+  padding-bottom: 0.875rem !important;
+  min-height: 44px; /* Norme d'accessibilité mobile Apple/Google */
+}
+
+/* Ajustement spécifique pour la barre de navigation du bas */
+#app-nav button {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+#app-nav span {
+  font-size: 0.75rem !important; /* 12px pour les petits labels sous les icônes de navigation */
+}
+
+/* Optimisation pour les tablettes (Écrans plus larges) */
+@media (min-width: 768px) {
+  body {
+    font-size: 18px !important; /* On augmente encore un peu sur tablette */
+  }
+  .text-lg { font-size: 1.35rem !important; }
+  .text-2xl { font-size: 1.75rem !important; }
+  .text-3xl { font-size: 2.25rem !important; }
+}
