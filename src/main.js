@@ -186,16 +186,21 @@ function setupGlobalEvents() {
             );
 
             if (confirmReset) {
+                // Bloquer explicitement la configuration locale
                 if (typeof AppState.setProfileConfigured === 'function') {
                     AppState.setProfileConfigured(false);
                 } else {
                     AppState.profileConfigured = false;
-                    localStorage.setItem('margot_profile_done', 'false');
                 }
+                localStorage.setItem('margot_profile_done', 'false'); // 👈 CRUCIAL : Informe le système de bloquer la resync au refresh
                 
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.ingredients);
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.products);
                 localStorage.removeItem('margot_shop_name');
+
+                // Vider l'état mémoire instantanément
+                AppState.ingredients = [];
+                AppState.products = [];
 
                 document.getElementById('app-nav')?.classList.add('hidden');
                 document.getElementById('backup-section')?.classList.add('hidden');
@@ -335,7 +340,21 @@ async function routeUser() {
             return; 
         }
 
-        // 🚀 SYNC CLOUD ET DÉTECTION AUTOMATIQUE DE PROFIL
+        // 🚀 AJOUT : ANNIHILATION DU TÉLÉCHARGEMENT EN MODE ONBOARDING/RÉINITIALISATION
+        const isProfileDone = localStorage.getItem('margot_profile_done');
+        if (isProfileDone === 'false') {
+            AppState.profileConfigured = false;
+            AppState.ingredients = [];
+            AppState.products = [];
+            document.getElementById('app-nav')?.classList.add('hidden');
+            backupSection?.classList.add('hidden');
+            switchScreen('onboarding');
+            showOnboardingStep(1);
+            initSwipeCommerce();
+            return; // 🛑 Stop ! On ne télécharge rien du Cloud, l'utilisateur réinitialise.
+        }
+
+        // 🚀 SYNC CLOUD ET DÉTECTION AUTOMATIQUE DE PROFIL (Si pas en cours de réinitialisation)
         let hasCloudData = false;
         try {
             // 1. Chargement des ingrédients
@@ -347,7 +366,7 @@ async function routeUser() {
             if (ingError) throw ingError;
             if (cloudIngredients && cloudIngredients.length > 0) {
                 AppState.ingredients = cloudIngredients;
-                hasCloudData = true; // L'utilisateur a déjà des données, l'onboarding est donc déjà fait !
+                hasCloudData = true; 
             }
 
             // 2. Chargement des produits (Fiches techniques)
@@ -361,7 +380,6 @@ async function routeUser() {
             if (cloudProducts && cloudProducts.length > 0) {
                 hasCloudData = true;
                 AppState.products = cloudProducts.map(p => {
-                    // Tenter de décoder les options de marge stockées dans le champ category
                     let metaSim = {};
                     try {
                         if (p.category && p.category.startsWith('{')) {
@@ -375,7 +393,6 @@ async function routeUser() {
                         ingredients: p.components, 
                         sellingPrice: p.price_override,
                         tva: p.tva,
-                        // Injection des critères mémorisés dans le Cloud
                         pertes: metaSim.pertes !== undefined ? metaSim.pertes : 0,
                         targetMargin: metaSim.targetMargin !== undefined ? metaSim.targetMargin : 70,
                         targetCoeff: metaSim.targetCoeff !== undefined ? metaSim.targetCoeff : 3.5
@@ -527,6 +544,7 @@ function initBackupSystem() {
 // --- FONCTION D'INITIALISATION GLOBALE ---
 async function init() {
     window.switchScreen = switchScreen;
+    window.switchScreenFromHistory = switchScreenFromHistory; // Exportation pour popstate
     window.showToast = showToast;
     window.refreshIcons = refreshIcons;
 
