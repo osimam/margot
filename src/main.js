@@ -72,7 +72,7 @@ export function showConfirm(msg, isDestructive = true) {
     });
 }
 
-// --- MISE À JOUR DISCRETE DU NOM DU COMMERCE ---
+// --- MISE À ZONE DISCRETE DU NOM DU COMMERCE ---
 export function updateHeaderShopName() {
     const shopNameElement = document.getElementById('app-shop-name');
     if (shopNameElement) {
@@ -311,15 +311,13 @@ function setupGlobalEvents() {
     }
 }
 
-// --- LOGIQUE DE ROUTAGE DÉFINITIVE ---
+// --- LOGIQUE DE ROUTAGE ET SYNCHRONISME DES DONNÉES CLOUD ---
 async function routeUser() {
     const backupSection = document.getElementById('backup-section');
 
     try {
-        // CORRECTION : On utilise l'objet window.supabase s'il existe, sinon on attend un peu
         const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
 
-        // Si Supabase n'est vraiment pas encore là, on patiente une fraction de seconde
         if (!supabaseInstance) {
             console.warn("Supabase n'est pas encore prêt, nouvelle tentative dans 200ms...");
             setTimeout(routeUser, 200);
@@ -335,6 +333,24 @@ async function routeUser() {
             backupSection?.classList.add('hidden');
             switchScreen('auth');
             return; 
+        }
+
+        // 🚀 SYNC CLOUD : L'utilisateur est connecté, on télécharge ses ingrédients
+        try {
+            const { data: cloudIngredients, error: ingError } = await supabaseInstance
+                .from('ingredients')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (ingError) throw ingError;
+
+            // On écrase les vieilles variables temporaires locales par les vraies lignes du Cloud
+            if (cloudIngredients) {
+                AppState.ingredients = cloudIngredients;
+            }
+        } catch (syncError) {
+            console.error("Impossible de récupérer les ingrédients en ligne :", syncError.message);
+            // On peut laisser un fallback local léger si besoin ou juste logger l'erreur
         }
 
         // ÉTAPE 2 : Si l'artisan EST connecté -> On vérifie son profil (onboarding)
@@ -399,7 +415,7 @@ function initBackupSystem() {
             URL.revokeObjectURL(url);
             showToast("Sauvegarde exportée !");
         } catch (error) {
-            console.error("Erreur lors de l'export :", error);
+            console.error("Erreur lors du l'export :", error);
             showToast("Impossible de générer la sauvegarde.");
         }
     });
