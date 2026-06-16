@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Margot - Pilotage de Rentabilité</title>
-    
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
     <link rel="stylesheet" href="./src/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -73,6 +75,73 @@
         </div>
 
         <main class="flex-1 p-4 overflow-y-auto space-y-6">
+            <section id="screen-auth" class="min-h-[80vh] flex flex-col justify-center max-w-md mx-auto px-6 py-8 space-y-6 animate-fadeIn">
+    
+    <div class="text-center space-y-2">
+        <h2 class="text-3xl font-black tracking-wider uppercase bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            Margot
+        </h2>
+        <p class="text-xs text-slate-400 font-medium max-w-[280px] mx-auto" id="auth-subtitle">
+            Pilotez la rentabilité de votre commerce et sécurisez vos marges en temps réel.
+        </p>
+    </div>
+
+    <div class="bg-slate-900/40 border border-slate-900 rounded-2xl p-5 space-y-4 backdrop-blur-sm">
+        
+        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-900">
+            <button id="tab-login" class="w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-900 text-emerald-400 transition-all cursor-pointer">
+                Connexion
+            </button>
+            <button id="tab-register" class="w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer">
+                Inscription
+            </button>
+        </div>
+
+        <div class="space-y-4 pt-2">
+            <div class="space-y-1.5">
+                <label for="auth-email" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
+                    Adresse E-mail
+                </label>
+                <div class="relative flex items-center">
+                    <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                    <input 
+                        type="email" 
+                        id="auth-email" 
+                        placeholder="artisan@moncommerce.fr" 
+                        class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
+                    />
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label for="auth-password" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
+                    Mot de passe
+                </label>
+                <div class="relative flex items-center">
+                    <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                    <input 
+                        type="password" 
+                        id="auth-password" 
+                        placeholder="••••••••" 
+                        class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
+                    />
+                </div>
+            </div>
+
+            <button 
+                id="btn-auth-submit" 
+                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/10 transition-all cursor-pointer mt-2 flex items-center justify-center gap-2"
+            >
+                <i data-lucide="log-in" class="w-4 h-4" id="btn-auth-icon"></i>
+                <span id="btn-auth-text">Se connecter à mon espace</span>
+            </button>
+        </div>
+    </div>
+
+    <p class="text-[10px] text-slate-500 text-center leading-relaxed max-w-[300px] mx-auto">
+        En vous connectant, vos fiches techniques et ingrédients sont automatiquement chiffrés et sauvegardés dans le Cloud.
+    </p>
+</section>
             
             <section id="screen-onboarding" class="space-y-6 py-4 animate-fade-in">
                 <div class="text-center space-y-2 px-2">
@@ -338,8 +407,8 @@
             </div>
         </div>
 
-    </div>
+    </div> <script type="module" src="./src/store/supabaseClient.js"></script>
+        <script type="module" src="./src/main.js"></script>
 
-    <script type="module" src="./src/main.js"></script>
-</body>
+    </body>
 </html>

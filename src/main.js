@@ -13,6 +13,8 @@ const LOCAL_STORAGE_KEYS = {
 };
 
 let _lucidePending = false;
+let authMode = 'login'; // <-- CORRECTION : Déplacé ici pour être accessible partout dans le fichier
+
 export function refreshIcons() {
     if (_lucidePending) return;
     _lucidePending = true;
@@ -87,7 +89,7 @@ export function updateHeaderShopName() {
 }
 
 // Changement d'Écran
-const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
+const SCREENS = ['auth', 'onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
 export function switchScreen(screenId) {
     // --- NOUVEAU : ENREGISTRER L'ÉCRAN DANS L'HISTORIQUE ---
     if (history.state?.screen !== screenId) {
@@ -105,14 +107,14 @@ export function switchScreen(screenId) {
 
     const profileBtn = document.getElementById('btn-edit-profile');
     if (profileBtn) {
-        if (screenId === 'onboarding') profileBtn.classList.add('hidden');
+        if (screenId === 'onboarding' || screenId === 'auth') profileBtn.classList.add('hidden');
         else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
     }
 
     // --- LE COMPORTEMENT DE LA SAUVEGARDE SYNCHRONISÉ ICI ---
     const backupSection = document.getElementById('backup-section');
     if (backupSection) {
-        if (AppState.profileConfigured && screenId !== 'onboarding') {
+        if (AppState.profileConfigured && screenId !== 'onboarding' && screenId !== 'auth') {
             backupSection.classList.remove('hidden');
         } else {
             backupSection.classList.add('hidden');
@@ -209,25 +211,149 @@ function setupGlobalEvents() {
             }
         });
     }
+
+    // --- GESTION DE L'ÉCRAN D'AUTHENTIFICATION (UI ONLY) ---
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const btnAuthText = document.getElementById('btn-auth-text');
+    const authSubtitle = document.getElementById('auth-subtitle');
+
+    if (tabLogin && tabRegister) {
+        // Clic sur l'onglet Connexion
+        tabLogin.addEventListener('click', () => {
+            authMode = 'login';
+            tabLogin.className = "w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-900 text-emerald-400 transition-all cursor-pointer";
+            tabRegister.className = "w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer";
+            if (btnAuthText) btnAuthText.textContent = "Se connecter à mon espace";
+            if (authSubtitle) authSubtitle.textContent = "Pilotez la rentabilité de votre commerce et sécurisez vos marges en temps réel.";
+        });
+
+        // Clic sur l'onglet Inscription
+        tabRegister.addEventListener('click', () => {
+            authMode = 'register';
+            tabRegister.className = "w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-900 text-emerald-400 transition-all cursor-pointer";
+            tabLogin.className = "w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer";
+            if (btnAuthText) btnAuthText.textContent = "Créer mon compte artisan";
+            if (authSubtitle) authSubtitle.textContent = "Rejoignez Margot pour sauvegarder automatiquement vos fiches techniques à l'abri des pannes.";
+        });
+    }
+
+    // --- GESTION DES ACTIONS SUPABASE (CONNEXION & INSCRIPTION) ---
+    const btnAuthSubmit = document.getElementById('btn-auth-submit');
+    if (btnAuthSubmit) {
+        btnAuthSubmit.addEventListener('click', async () => {
+            const email = document.getElementById('auth-email')?.value.trim();
+            const password = document.getElementById('auth-password')?.value;
+            
+            // Récupération sécurisée de l'instance Supabase connectée
+            const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+
+            if (!supabaseInstance) {
+                alert("L'application n'est pas encore connectée au serveur. Veuillez patienter ou recharger la page.");
+                return;
+            }
+
+            // Détection du mode (Connexion ou Inscription) selon l'onglet vert actif
+            const tabRegister = document.getElementById('tab-register');
+            const isRegisterMode = tabRegister && tabRegister.classList.contains('text-emerald-400');
+
+            // Validation de base
+            if (!email || !password) {
+                alert("Veuillez remplir tous les champs.");
+                return;
+            }
+
+            if (password.length < 6) {
+                alert("Le mot de passe doit contenir au moins 6 caractères.");
+                return;
+            }
+
+            // Désactivation temporaire du bouton pendant le chargement
+            btnAuthSubmit.disabled = true;
+            const originalText = btnAuthSubmit.innerHTML;
+            btnAuthSubmit.innerHTML = `<span>Chargement...</span>`;
+
+            try {
+                if (!isRegisterMode) {
+                    // --- TENTATIVE DE CONNEXION ---
+                    const { data, error } = await supabaseInstance.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (error) throw error;
+                    showToast("Connexion réussie !");
+                    
+                } else {
+                    // --- TENTATIVE D'INSCRIPTION ---
+                    const { data, error } = await supabaseInstance.auth.signUp({
+                        email: email,
+                        password: password
+                    });
+
+                    if (error) throw error;
+
+                    alert("Compte créé avec succès ! Vérifiez votre boîte e-mail pour confirmer votre inscription avant de vous connecter.");
+                }
+
+                // Une fois connecté ou inscrit, on relance le routage automatique
+                await routeUser();
+
+            } catch (error) {
+                console.error("Erreur d'authentification :", error);
+                alert(`Erreur : ${error.message || "Impossible de s'authentifier"}`);
+            } finally {
+                // Réactivation du bouton
+                btnAuthSubmit.disabled = false;
+                btnAuthSubmit.innerHTML = originalText;
+            }
+        });
+    }
 }
 
-// --- LOGIQUE DE ROUTAGE ---
-function routeUser() {
+// --- LOGIQUE DE ROUTAGE DÉFINITIVE ---
+async function routeUser() {
     const backupSection = document.getElementById('backup-section');
 
-    if (AppState.profileConfigured) {
-        document.getElementById('app-nav')?.classList.remove('hidden');
-        backupSection?.classList.remove('hidden');
-        
-        updateHeaderShopName(); // Affiche le nom dès le démarrage de l'app si configuré
-        
-        switchScreen('products');
-    } else {
-        document.getElementById('app-nav')?.classList.add('hidden');
-        backupSection?.classList.add('hidden');
-        switchScreen('onboarding');
-        showOnboardingStep(1);
-        initSwipeCommerce();
+    try {
+        // CORRECTION : On utilise l'objet window.supabase s'il existe, sinon on attend un peu
+        const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+
+        // Si Supabase n'est vraiment pas encore là, on patiente une fraction de seconde
+        if (!supabaseInstance) {
+            console.warn("Supabase n'est pas encore prêt, nouvelle tentative dans 200ms...");
+            setTimeout(routeUser, 200);
+            return;
+        }
+
+        // 1. On demande à Supabase s'il y a une session active
+        const { data: { session } } = await supabaseInstance.auth.getSession();
+
+        // ÉTAPE 1 : Si l'artisan n'est PAS connecté -> Direction l'écran Auth
+        if (!session) {
+            document.getElementById('app-nav')?.classList.add('hidden');
+            backupSection?.classList.add('hidden');
+            switchScreen('auth');
+            return; 
+        }
+
+        // ÉTAPE 2 : Si l'artisan EST connecté -> On vérifie son profil (onboarding)
+        if (AppState.profileConfigured) {
+            document.getElementById('app-nav')?.classList.remove('hidden');
+            backupSection?.classList.remove('hidden');
+            updateHeaderShopName(); 
+            switchScreen('products');
+        } else {
+            document.getElementById('app-nav')?.classList.add('hidden');
+            backupSection?.classList.add('hidden');
+            switchScreen('onboarding');
+            showOnboardingStep(1);
+            initSwipeCommerce();
+        }
+
+    } catch (error) {
+        console.error("Erreur lors du routage de l'utilisateur :", error);
+        switchScreen('auth');
     }
 }
 
@@ -344,7 +470,7 @@ function initBackupSystem() {
 }
 
 // --- FONCTION D'INITIALISATION GLOBALE ---
-function init() {
+async function init() {
     window.switchScreen = switchScreen;
     window.showToast = showToast;
     window.refreshIcons = refreshIcons;
@@ -357,7 +483,7 @@ function init() {
     setupGlobalEvents();
     initBackupSystem();
     
-    routeUser();
+    await routeUser();
     refreshIcons();
 }
 
@@ -371,7 +497,8 @@ window.addEventListener('popstate', (event) => {
 });
 
 function switchScreenFromHistory(screenId) {
-    const SCREENS = ['onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
+    const SCREENS = ['auth', 'onboarding', 'ingredients', 'products', 'margins', 'planner', 'settings'];
+    
     SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`)?.classList.add('hidden');
         const navBtn = document.getElementById(`nav-${s}`);
@@ -384,20 +511,23 @@ function switchScreenFromHistory(screenId) {
 
     const profileBtn = document.getElementById('btn-edit-profile');
     if (profileBtn) {
-        if (screenId === 'onboarding') profileBtn.classList.add('hidden');
+        if (screenId === 'onboarding' || screenId === 'auth') profileBtn.classList.add('hidden');
         else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
     }
 
     const backupSection = document.getElementById('backup-section');
     if (backupSection) {
-        if (AppState.profileConfigured && screenId !== 'onboarding') backupSection.classList.remove('hidden');
-        else backupSection.classList.add('hidden');
+        if (AppState.profileConfigured && screenId !== 'onboarding' && screenId !== 'auth') {
+            backupSection.classList.remove('hidden');
+        } else {
+            backupSection.classList.add('hidden');
+        }
     }
 
     if (screenId === 'ingredients') renderIngredients();
     if (screenId === 'products') {
         renderProducts();
-        updateHeaderShopName(); // Maintient l'affichage synchrone sur l'historique retour
+        updateHeaderShopName();
     }
     if (screenId === 'margins') populateMarginDropdown();
     if (screenId === 'planner') populatePlannerInputs();
