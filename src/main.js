@@ -335,25 +335,50 @@ async function routeUser() {
             return; 
         }
 
-        // 🚀 SYNC CLOUD : L'utilisateur est connecté, on télécharge ses ingrédients
+        // 🚀 SYNC CLOUD ET DÉTECTION AUTOMATIQUE DE PROFIL
+        let hasCloudData = false;
         try {
+            // 1. Chargement des ingrédients
             const { data: cloudIngredients, error: ingError } = await supabaseInstance
                 .from('ingredients')
                 .select('*')
                 .order('name', { ascending: true });
 
             if (ingError) throw ingError;
-
-            // On écrase les vieilles variables temporaires locales par les vraies lignes du Cloud
-            if (cloudIngredients) {
+            if (cloudIngredients && cloudIngredients.length > 0) {
                 AppState.ingredients = cloudIngredients;
+                hasCloudData = true; // L'utilisateur a déjà des données, l'onboarding est donc déjà fait !
+            }
+
+            // 2. Chargement des produits (Fiches techniques)
+            const { data: cloudProducts, error: prodError } = await supabaseInstance
+                .from('products')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (prodError) throw prodError;
+            
+            if (cloudProducts && cloudProducts.length > 0) {
+                hasCloudData = true;
+                AppState.products = cloudProducts.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    ingredients: p.components, 
+                    sellingPrice: p.price_override,
+                    tva: p.tva
+                }));
             }
         } catch (syncError) {
-            console.error("Impossible de récupérer les ingrédients en ligne :", syncError.message);
-            // On peut laisser un fallback local léger si besoin ou juste logger l'erreur
+            console.error("Impossible de récupérer les données en ligne :", syncError.message);
         }
 
-        // ÉTAPE 2 : Si l'artisan EST connecté -> On vérifie son profil (onboarding)
+        // Si des données ont été trouvées dans le Cloud, on valide l'onboarding de l'appareil automatiquement
+        if (hasCloudData) {
+            AppState.profileConfigured = true;
+            localStorage.setItem('margot_profile_done', 'true');
+        }
+
+        // ÉTAPE 2 : Routage vers le bon écran selon l'état du profil mis à jour
         if (AppState.profileConfigured) {
             document.getElementById('app-nav')?.classList.remove('hidden');
             backupSection?.classList.remove('hidden');

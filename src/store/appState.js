@@ -12,6 +12,7 @@ const Storage = {
 
 export const AppState = {
     // --- 1. ÉTATS DE CONFIGURATION ET FILTRES ---
+    // Par défaut false, mais le routeur principal va le passer à true s'il trouve des données dans le Cloud
     profileConfigured: localStorage.getItem('margot_profile_done') === 'true',
     currentScreen: 'onboarding',
     
@@ -21,9 +22,9 @@ export const AppState = {
     onboardCustomIngredients: [],
 
     // --- 3. DONNÉES DE L'ARTISAN ---
-    products: Storage.get('margot_products', []),
-    ingredients: Storage.get('margot_ingredients', []),
-    recipes: Storage.get('margot_recipes', []),
+    products: [],
+    ingredients: [],
+    recipes: [],
     
     simMode: localStorage.getItem('margot_sim_mode') || 'A',
     simTva: parseFloat(localStorage.getItem('margot_sim_tva')) || 10,
