@@ -1,6 +1,8 @@
 import { AppState } from '../store/appState.js';
 import { PriceUtils, escapeHtml } from '../utils/priceUtils.js';
 import { showToast, showConfirm, refreshIcons } from '../main.js';
+// 🚀 Importation de notre client Supabase connecté au Cloud
+import { supabaseClient } from '../store/supabaseClient.js';
 
 export function initIngredientsEvents() {
     const btnAdd = document.getElementById('btn-add-ingredient');
@@ -43,7 +45,6 @@ export function renderIngredients() {
         </div>
     `).join('');
 
-    // Assignation propre des clics
     list.querySelectorAll('.edit-ing-btn').forEach(btn => {
         btn.addEventListener('click', () => openEditIngredientModal(btn.dataset.id));
     });
@@ -64,7 +65,7 @@ function openAddIngredientModal() {
     document.getElementById('ing-name').value = "";
     document.getElementById('ing-price').value = ""; 
     document.getElementById('ing-qty').value = "1";
-    document.getElementById('ing-unit').value = "kg"; // Valeur par défaut cohérente
+    document.getElementById('ing-unit').value = "kg";
     
     if (modal) modal.classList.remove('hidden');
     refreshIcons();
@@ -82,7 +83,6 @@ function openEditIngredientModal(id) {
     document.getElementById('ing-id-field').value = ing.id; 
     document.getElementById('ing-name').value = ing.name;
     
-    // Conversion sécurisée en cas de prix stocké en centimes
     document.getElementById('ing-price').value = typeof PriceUtils.toEurosFloat === 'function' ? PriceUtils.toEurosFloat(ing.price) : (ing.price / 100); 
     document.getElementById('ing-qty').value = ing.qty; 
     document.getElementById('ing-unit').value = ing.unit;
@@ -91,11 +91,17 @@ function openEditIngredientModal(id) {
     refreshIcons();
 }
 
-function saveIngredient() {
+// 🚀 Fonction passée en ASYNC pour pouvoir dialoguer en ligne
+async function saveIngredient() {
+    // 1. Récupération de l'utilisateur connecté depuis la session Supabase
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        showToast("Session expirée. Veuillez vous reconnecter.", "error");
+        return;
+    }
+
     const id = document.getElementById('ing-id-field').value;
     const name = document.getElementById('ing-name').value.trim();
-    
-    // Nettoyage de la saisie utilisateur (remplacement automatique de la virgule par un point)
     const priceRaw = document.getElementById('ing-price').value.replace(',', '.');
     const qty = parseFloat(document.getElementById('ing-qty').value);
     const unit = document.getElementById('ing-unit').value;
@@ -106,50 +112,93 @@ function saveIngredient() {
 
     const priceInCents = PriceUtils.toCents(priceRaw);
 
-    if (id) {
-        // Mode Modification
-        const ing = AppState.ingredients.find(x => x.id === id);
-        if (ing) { 
-            ing.name = name; 
-            ing.price = priceInCents; 
-            ing.qty = qty; 
-            ing.unit = unit; 
-        }
-    } else {
-        // Mode Création (ID natif isolé)
-        const newId = 'i_' + Math.random().toString(36).substr(2, 9);
-        AppState.ingredients.push({ id: newId, name, price: priceInCents, qty, unit });
-    }
+    // Préparation de la structure de l'objet pour la base Supabase
+    const ingredientData = {
+        user_id: user.id, // Liaison cruciale de sécurité
+        name: name,
+        price: priceInCents,
+        qty: qty,
+        unit: unit
+    };
 
-    // Sauvegarde immédiate synchronisée localement
-    localStorage.setItem('margot_ingredients', JSON.stringify(AppState.ingredients));
-    
-    const modal = document.getElementById('modal-ingredient');
-    if (modal) modal.classList.add('hidden');
-    
-    renderIngredients(); 
-    showToast("Matière enregistrée avec succès !");
+    try {
+        if (id) {
+            // Mode Modification : Envoi d'une requête UPDATE filtrée sur l'ID
+            const { error } = await supabaseClient
+                .from('ingredients')
+                .update(ingredientData)
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Mise à jour de l'état local JavaScript
+            const ing = AppState.ingredients.find(x => x.id === id);
+            if (ing) { 
+                ing.name = name; 
+                ing.price = priceInCents; 
+                ing.qty = qty; 
+                ing.unit = unit; 
+            }
+        } else {
+            // Mode Création : Envoi d'une requête INSERT
+            // select() permet de récupérer la ligne complète générée par Supabase, incluant son ID (UUID) officiel
+            const { data, error } = await supabaseClient
+                .from('ingredients')
+                .insert([ingredientData])
+                .select();
+
+            if (error) throw error;
+
+            // Ajout du nouvel ingrédient doté de son ID Cloud dans l'état de l'application
+            if (data && data[0]) {
+                AppState.ingredients.push(data[0]);
+            }
+        }
+
+        const modal = document.getElementById('modal-ingredient');
+        if (modal) modal.classList.add('hidden');
+        
+        renderIngredients(); 
+        showToast("Matière enregistrée dans le Cloud !");
+
+    } catch (err) {
+        console.error("Erreur de sauvegarde Supabase :", err.message);
+        showToast("Erreur lors de la sauvegarde en ligne.", "error");
+    }
 }
 
+// 🚀 Fonction de suppression mise à jour pour le Cloud
 async function deleteIngredient(id) {
     const ing = AppState.ingredients.find(x => x.id === id); 
     if (!ing) return;
     
     const confirmed = await showConfirm(`Supprimer la matière "${ing.name}" ?\nElle sera retirée de vos fiches techniques associées.`);
     if (!confirmed) return;
-    
-    // Filtrage et nettoyage automatique
-    AppState.ingredients = AppState.ingredients.filter(x => x.id !== id);
-    localStorage.setItem('margot_ingredients', JSON.stringify(AppState.ingredients));
 
-    // Nettoyage cascade : retire la référence de cette matière dans toutes les recettes existantes
-    if (AppState.products) {
-        AppState.products.forEach(p => { 
-            if (p.ingredients) p.ingredients = p.ingredients.filter(i => i.id !== id); 
-        });
-        localStorage.setItem('margot_products', JSON.stringify(AppState.products));
+    try {
+        // Suppression de la ligne correspondante dans la base Supabase
+        const { error } = await supabaseClient
+            .from('ingredients')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        // Nettoyage de l'état local en mémoire
+        AppState.ingredients = AppState.ingredients.filter(x => x.id !== id);
+
+        // Si des produits locaux dépendent de cet ingrédient, on les met à jour (à lier à ta table produits plus tard)
+        if (AppState.products) {
+            AppState.products.forEach(p => { 
+                if (p.ingredients) p.ingredients = p.ingredients.filter(i => i.id !== id); 
+            });
+        }
+        
+        renderIngredients(); 
+        showToast("Matière supprimée du Cloud !");
+
+    } catch (err) {
+        console.error("Erreur de suppression Supabase :", err.message);
+        showToast("Impossible de supprimer cette matière.", "error");
     }
-    
-    renderIngredients(); 
-    showToast("Matière supprimée");
 }
