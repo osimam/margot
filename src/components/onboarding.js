@@ -420,16 +420,31 @@ async function finalizeOnboarding() {
         if (prodError) throw prodError;
 
         // Structuration propre de l'état mémoire de l'UI avec les vrais UUID générés en ligne
-        AppState.products = (insertedProducts || []).map(p => ({
-            id: p.id, 
-            name: p.name,
-            ingredients: p.components, 
-            sellingPrice: p.price_override,
-            tva: p.tva,
-            pertes: 0,
-            targetMargin: 70,
-            targetCoeff: 3.5
-        }));
+        AppState.products = (insertedProducts || []).map(p => {
+            // 🛠️ FIX : On s'assure de décoder la chaîne JSON en vrai tableau JS
+            let parsedComponents = [];
+            try {
+                if (typeof p.components === 'string') {
+                    parsedComponents = JSON.parse(p.components);
+                } else if (Array.isArray(p.components)) {
+                    parsedComponents = p.components;
+                }
+            } catch (e) {
+                console.warn("Erreur lors du parse des composants du produit :", e);
+                parsedComponents = [];
+            }
+
+            return {
+                id: p.id, 
+                name: p.name,
+                ingredients: parsedComponents, // 👈 Transmet maintenant un vrai tableau utilisable par .forEach()
+                sellingPrice: p.price_override,
+                tva: p.tva,
+                pertes: 0,
+                targetMargin: 70,
+                targetCoeff: 3.5
+            };
+        });
 
         // --------------------------------------------------------
         // 4. VERROUILLAGE DU PROFIL ET PERSISTANCE LOCALE

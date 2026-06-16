@@ -387,10 +387,20 @@ async function routeUser() {
                         }
                     } catch(e) { metaSim = {}; }
 
+                    // 🛠️ AJOUT SÉCURITÉ ICI AUSSI
+                    let parsedComponents = [];
+                    try {
+                        if (typeof p.components === 'string') {
+                            parsedComponents = JSON.parse(p.components);
+                        } else if (Array.isArray(p.components)) {
+                            parsedComponents = p.components;
+                        }
+                    } catch(e) { parsedComponents = []; }
+
                     return {
                         id: p.id,
                         name: p.name,
-                        ingredients: p.components, 
+                        ingredients: parsedComponents, // 👈 Correction ici aussi
                         sellingPrice: p.price_override,
                         tva: p.tva,
                         pertes: metaSim.pertes !== undefined ? metaSim.pertes : 0,
