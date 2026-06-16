@@ -1,6 +1,8 @@
 import { AppState } from '../store/appState.js';
 import { PriceUtils, escapeHtml } from '../utils/priceUtils.js';
 import { showToast, showConfirm, refreshIcons } from '../main.js';
+// 🚀 Importation de notre client Supabase connecté au Cloud
+import { supabaseClient } from '../store/supabaseClient.js';
 
 export function initProductsEvents() {
     const btnOpen = document.getElementById('btn-open-product-modal');
@@ -53,7 +55,6 @@ export function renderProducts() {
         `;
     }).join('');
 
-    // Ré-association des événements de clics
     container.querySelectorAll('.btn-edit-recipe').forEach(btn => {
         btn.addEventListener('click', (e) => { e.preventDefault(); openProductRecipeModal(btn.dataset.id); });
     });
@@ -69,12 +70,12 @@ function openNewProductModal() {
     const title = document.getElementById('modal-product-title') || document.getElementById('product-modal-title');
     const idField = document.getElementById('product-id-field') || document.getElementById('product-id');
     const nameField = document.getElementById('product-name');
-    const priceField = document.getElementById('product-price'); // Nouveau champ
+    const priceField = document.getElementById('product-price');
 
     if (title) title.innerHTML = `<i data-lucide="plus-circle" class="text-emerald-400 w-5 h-5"></i>Créer un Produit`;
     if (idField) idField.value = ""; 
     if (nameField) nameField.value = "";
-    if (priceField) priceField.value = ""; // Vider le prix
+    if (priceField) priceField.value = "";
     
     renderRecipeIngredientsSelector([]); 
     if (modal) modal.classList.remove('hidden');
@@ -89,12 +90,12 @@ function openProductRecipeModal(id) {
     const title = document.getElementById('modal-product-title') || document.getElementById('product-modal-title');
     const idField = document.getElementById('product-id-field') || document.getElementById('product-id');
     const nameField = document.getElementById('product-name');
-    const priceField = document.getElementById('product-price'); // Nouveau champ
+    const priceField = document.getElementById('product-price');
 
     if (title) title.innerHTML = `<i data-lucide="notebook" class="text-emerald-400 w-5 h-5"></i>Modifier : ${escapeHtml(p.name)}`;
     if (idField) idField.value = p.id; 
     if (nameField) nameField.value = p.name;
-    if (priceField) priceField.value = p.sellingPrice || ""; // Charger le prix stocké
+    if (priceField) priceField.value = p.sellingPrice || "";
     
     renderRecipeIngredientsSelector(p.ingredients || []); 
     if (modal) modal.classList.remove('hidden');
@@ -142,10 +143,18 @@ function renderRecipeIngredientsSelector(recipeIngredients) {
     });
 }
 
-function saveProduct() {
+// 🚀 Passage en ASYNC pour communiquer avec la table SQL 'products'
+async function saveProduct() {
+    // Récupération de la session utilisateur
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        showToast("Session expirée. Veuillez vous reconnecter.", "error");
+        return;
+    }
+
     const idField = document.getElementById('product-id-field') || document.getElementById('product-id');
     const nameField = document.getElementById('product-name');
-    const priceField = document.getElementById('product-price'); // Récupération du champ prix
+    const priceField = document.getElementById('product-price');
     
     const id = idField ? idField.value : "";
     const name = nameField ? nameField.value.trim() : "";
@@ -166,46 +175,96 @@ function saveProduct() {
     
     if (err) { showToast("Veuillez saisir des quantités valides pour les matières cochées.", "error"); return; }
 
-    if (id) {
-        const p = AppState.products.find(x => x.id === id); 
-        if (p) { 
-            p.name = name; 
-            p.ingredients = selectedIngredients; 
-            p.sellingPrice = sellingPrice; // Mise à jour du prix
-        }
-    } else {
-        const newId = 'p_' + Math.random().toString(36).substr(2, 9);
-        AppState.products.push({ 
-            id: newId, 
-            name, 
-            ingredients: selectedIngredients,
-            sellingPrice: sellingPrice, // Enregistrement du prix
-            tva: 10
-        });
-    }
+    // Préparation de l'objet pour la table SQL Supabase
+    const productPayload = {
+        user_id: user.id,
+        name: name,
+        category: 'Général', // Valeur obligatoire non nulle requise par ta structure SQL
+        price_override: sellingPrice, // On stocke la simulation du prix de vente
+        tva: 10.00,
+        components: selectedIngredients // Enregistré sous forme de JSON natif automatiquement géré par Supabase
+    };
 
-    localStorage.setItem('margot_products', JSON.stringify(AppState.products)); 
-    
-    const modal = document.getElementById('modal-product') || document.getElementById('product-modal');
-    if (modal) modal.classList.add('hidden'); 
-    
-    renderProducts(); 
-    showToast("Produit sauvegardé avec succès !");
+    try {
+        if (id) {
+            // Mode Modification : Envoi d'une requête UPDATE filtrée sur l'ID
+            const { error } = await supabaseClient
+                .from('products')
+                .update(productPayload)
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Mise à jour de l'état en mémoire locale JavaScript
+            const p = AppState.products.find(x => x.id === id); 
+            if (p) { 
+                p.name = name; 
+                p.ingredients = selectedIngredients; 
+                p.sellingPrice = sellingPrice;
+            }
+        } else {
+            // Mode Création : Envoi d'une requête INSERT
+            const { data, error } = await supabaseClient
+                .from('products')
+                .insert([productPayload])
+                .select();
+
+            if (error) throw error;
+
+            // Mapping inverse pour réinjecter le produit créé dans le AppState au format attendu par ton UI
+            if (data && data[0]) {
+                const newProduct = {
+                    id: data[0].id,
+                    name: data[0].name,
+                    ingredients: data[0].components, // re-mapping vers ton UI locale
+                    sellingPrice: data[0].price_override,
+                    tva: data[0].tva
+                };
+                AppState.products.push(newProduct);
+            }
+        }
+
+        const modal = document.getElementById('modal-product') || document.getElementById('product-modal');
+        if (modal) modal.classList.add('hidden'); 
+        
+        renderProducts(); 
+        showToast("Produit sauvegardé dans le Cloud !");
+
+    } catch (err) {
+        console.error("Erreur de sauvegarde produit Supabase :", err.message);
+        showToast("Erreur lors de la sauvegarde du produit.", "error");
+    }
 }
 
+// 🚀 Passage en ASYNC pour la suppression Cloud
 async function deleteProduct(id) {
     const p = AppState.products.find(x => x.id === id); 
     if (!p) return;
     
     const confirmed = await showConfirm(`Supprimer le produit "${p.name}" ?`);
     if (!confirmed) return;
-    
-    AppState.products = AppState.products.filter(x => x.id !== id); 
-    localStorage.setItem('margot_products', JSON.stringify(AppState.products)); 
-    
-    renderProducts(); 
-    showToast("Produit supprimé");
+
+    try {
+        // Envoi de l'ordre de suppression à Supabase
+        const { error } = await supabaseClient
+            .from('products')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        // Nettoyage en local
+        AppState.products = AppState.products.filter(x => x.id !== id); 
+        
+        renderProducts(); 
+        showToast("Produit supprimé du Cloud !");
+
+    } catch (err) {
+        console.error("Erreur de suppression produit Supabase :", err.message);
+        showToast("Impossible de supprimer le produit en ligne.", "error");
+    }
 }
+
 /**
  * Calcule dynamiquement le coût de revient d'un produit en fonction de ses ingrédients
  * @param {Object} product 
@@ -221,7 +280,7 @@ function calculateCostPrice(product) {
         const baseIng = AppState.ingredients.find(x => x.id === recipeIng.id);
         
         if (baseIng && baseIng.qty > 0) {
-            // Prix pour 1 unité (ex: prix au kg ou au litre) en centimes
+            // Prix pour 1 unité en centimes
             const pricePerUnit = baseIng.price / baseIng.qty;
             
             // Coût proportionnel pour la quantité utilisée dans la recette
