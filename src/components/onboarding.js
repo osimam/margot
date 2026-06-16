@@ -397,7 +397,8 @@ async function finalizeOnboarding() {
             name: cb.value,
             components: JSON.stringify([]),
             price_override: 0,
-            tva: 10
+            tva: 10,
+            category: "{}" // 👈 CORRECTION : Évite la violation de contrainte Not-Null
         }));
 
         const customProductsRaw = (AppState.onboardCustomProducts || []).map(name => ({
@@ -405,7 +406,8 @@ async function finalizeOnboarding() {
             name: name,
             components: JSON.stringify([]),
             price_override: 0,
-            tva: 10
+            tva: 10,
+            category: "{}" // 👈 CORRECTION : Évite la violation de contrainte Not-Null
         }));
 
         const allProductsToCloud = [...defaultProductsRaw, ...customProductsRaw];
