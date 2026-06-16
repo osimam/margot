@@ -1,6 +1,7 @@
 import { AppState } from '../store/appState.js';
 import { PriceUtils, escapeHtml } from '../utils/priceUtils.js';
-import { refreshIcons } from '../main.js';
+import { refreshIcons, showToast } from '../main.js';
+import { supabaseClient } from '../store/supabaseClient.js'; // 🚀 Connexion Cloud
 import Chart from 'chart.js/auto';
 
 function debounce(func, wait) {
@@ -15,22 +16,23 @@ export function initMarginsEvents() {
     const select = document.getElementById('margin-product-select');
     const btnModeA = document.getElementById('btn-mode-a');
     const btnModeB = document.getElementById('btn-mode-b');
-    const btnModeC = document.getElementById('btn-mode-c'); // Nouveau
+    const btnModeC = document.getElementById('btn-mode-c');
     
     const inputPrice = document.getElementById('input-price-ttc');
     const inputSlider = document.getElementById('input-marge-slider');
-    const inputCoeff = document.getElementById('input-coeff'); // Nouveau
-    const inputPertes = document.getElementById('input-pertes-slider'); // Nouveau
+    const inputCoeff = document.getElementById('input-coeff');
+    const inputPertes = document.getElementById('input-pertes-slider');
 
     if (select) select.addEventListener('change', loadMarginSimulation);
     if (btnModeA) btnModeA.addEventListener('click', () => switchMarginMode('A'));
     if (btnModeB) btnModeB.addEventListener('click', () => switchMarginMode('B'));
-    if (btnModeC) btnModeC.addEventListener('click', () => switchMarginMode('C')); // Nouveau
+    if (btnModeC) btnModeC.addEventListener('click', () => switchMarginMode('C'));
     
-    if (inputPrice) inputPrice.addEventListener('input', debounce(handlePriceInput, 150));
-    if (inputSlider) inputSlider.addEventListener('input', debounce(handleSliderInput, 150));
-    if (inputCoeff) inputCoeff.addEventListener('input', debounce(handleCoeffInput, 150)); // Nouveau
-    if (inputPertes) inputPertes.addEventListener('input', handlePertesInput); // Nouveau (instantané pour le label)
+    // Débrayage et sauvegarde automatique en ligne lors de la saisie
+    if (inputPrice) inputPrice.addEventListener('input', debounce(() => handleInputChange('price'), 300));
+    if (inputSlider) inputSlider.addEventListener('input', debounce(() => handleInputChange('margin'), 300));
+    if (inputCoeff) inputCoeff.addEventListener('input', debounce(() => handleInputChange('coeff'), 300));
+    if (inputPertes) inputPertes.addEventListener('input', handlePertesInput);
     
     document.querySelectorAll('.tva-btn').forEach(btn => {
         btn.addEventListener('click', () => setSimTva(parseFloat(btn.dataset.tva)));
@@ -75,39 +77,33 @@ function loadMarginSimulation() {
     const productId = AppState._selectedProduct.id;
     const costCents = AppState.getProductCostCents(AppState._selectedProduct);
 
-    // --- RESTAURATION DES VALEURS MÉMORISÉES POUR CE PRODUIT ---
+    // --- RESTAURATION DEPUIS L'ÉTAT LOCAL (ALIMENTÉ PAR LE CLOUD) ---
     
     // 1. Pertes mémorisées (Par défaut 0%)
-    const savedPertes = JSON.parse(localStorage.getItem('margot_saved_product_pertes') || '{}');
-    const currentPertes = savedPertes[productId] !== undefined ? savedPertes[productId] : 0;
+    const currentPertes = AppState._selectedProduct.pertes !== undefined ? AppState._selectedProduct.pertes : 0;
     const inputPertes = document.getElementById('input-pertes-slider');
     if (inputPertes) inputPertes.value = currentPertes;
     const pertesValDisplay = document.getElementById('pertes-value');
     if (pertesValDisplay) pertesValDisplay.textContent = `${currentPertes}%`;
 
-    // Calcul du coût ajusté avec pertes pour les pré-remplissages
     const costAjustedCents = Math.round(costCents * (1 + (currentPertes / 100)));
 
-    // Mettre à jour l'affichage du coût brut sur l'interface
     const costDisplay = document.getElementById('sim-cost-display');
     if (costDisplay) costDisplay.textContent = `${PriceUtils.toEurosString(costCents)} €`;
 
     // 2. Slider Marge (Mode B) : Valeur mémorisée OU 70%
-    const savedMargins = JSON.parse(localStorage.getItem('margot_saved_product_margins') || '{}');
-    const currentProductMargin = savedMargins[productId] !== undefined ? savedMargins[productId] : 70;
+    const currentProductMargin = AppState._selectedProduct.targetMargin !== undefined ? AppState._selectedProduct.targetMargin : 70;
     const inputSlider = document.getElementById('input-marge-slider');
     if (inputSlider) inputSlider.value = currentProductMargin;
 
     // 3. Coefficient (Mode C) : Valeur mémorisée OU 3.5 par défaut
-    const savedCoeffs = JSON.parse(localStorage.getItem('margot_saved_product_coeffs') || '{}');
-    const currentProductCoeff = savedCoeffs[productId] !== undefined ? savedCoeffs[productId] : 3.5;
+    const currentProductCoeff = AppState._selectedProduct.targetCoeff !== undefined ? AppState._selectedProduct.targetCoeff : 3.5;
     const inputCoeff = document.getElementById('input-coeff');
     if (inputCoeff) inputCoeff.value = currentProductCoeff;
 
-    // 4. Prix TTC (Mode A) : Valeur mémorisée OU calculée sur la base de la marge par défaut
-    const savedPrices = JSON.parse(localStorage.getItem('margot_saved_product_prices') || '{}');
-    let currentProductPriceTTC = savedPrices[productId];
-    if (currentProductPriceTTC === undefined) {
+    // 4. Prix TTC (Mode A)
+    let currentProductPriceTTC = AppState._selectedProduct.sellingPrice;
+    if (!currentProductPriceTTC) {
         const defaultPriceHtCents = Math.round(costAjustedCents / (1 - (currentProductMargin / 100)));
         const defaultPriceTtcCents = Math.round(defaultPriceHtCents * (1 + ((AppState.simTva || 10) / 100)));
         currentProductPriceTTC = PriceUtils.toEurosFloat(defaultPriceTtcCents).toFixed(2);
@@ -115,7 +111,6 @@ function loadMarginSimulation() {
     const inputPrice = document.getElementById('input-price-ttc');
     if (inputPrice) inputPrice.value = currentProductPriceTTC;
 
-    // Lancement du calcul global
     executeActiveCalculation();
 }
 
@@ -125,37 +120,58 @@ function executeActiveCalculation() {
     else if (AppState.simMode === 'C') calculateOutputsModeC();
 }
 
-function handlePriceInput() {
+// 🚀 Gestionnaire unique pour sauvegarder les modifications de critères sur Supabase
+async function handleInputChange(type) {
     if (!AppState._selectedProduct) return;
+
     const inputPrice = document.getElementById('input-price-ttc');
-    if (!inputPrice) return;
-
-    const savedPrices = JSON.parse(localStorage.getItem('margot_saved_product_prices') || '{}');
-    savedPrices[AppState._selectedProduct.id] = inputPrice.value;
-    localStorage.setItem('margot_saved_product_prices', JSON.stringify(savedPrices));
-    calculateOutputsModeA();
-}
-
-function handleSliderInput() {
-    if (!AppState._selectedProduct) return;
     const inputSlider = document.getElementById('input-marge-slider');
-    if (!inputSlider) return;
-
-    const savedMargins = JSON.parse(localStorage.getItem('margot_saved_product_margins') || '{}');
-    savedMargins[AppState._selectedProduct.id] = parseFloat(inputSlider.value);
-    localStorage.setItem('margot_saved_product_margins', JSON.stringify(savedMargins));
-    calculateOutputsModeB();
-}
-
-function handleCoeffInput() {
-    if (!AppState._selectedProduct) return;
     const inputCoeff = document.getElementById('input-coeff');
-    if (!inputCoeff) return;
+    const inputPertes = document.getElementById('input-pertes-slider');
 
-    const savedCoeffs = JSON.parse(localStorage.getItem('margot_saved_product_coeffs') || '{}');
-    savedCoeffs[AppState._selectedProduct.id] = parseFloat(inputCoeff.value) || 1;
-    localStorage.setItem('margot_saved_product_coeffs', JSON.stringify(savedCoeffs));
-    calculateOutputsModeC();
+    // Mettre à jour l'état local immédiat
+    if (type === 'price' && inputPrice) AppState._selectedProduct.sellingPrice = parseFloat(inputPrice.value) || 0;
+    if (type === 'margin' && inputSlider) AppState._selectedProduct.targetMargin = parseFloat(inputSlider.value) || 0;
+    if (type === 'coeff' && inputCoeff) AppState._selectedProduct.targetCoeff = parseFloat(inputCoeff.value) || 1;
+    if (type === 'pertes' && inputPertes) AppState._selectedProduct.pertes = parseFloat(inputPertes.value) || 0;
+
+    // Lancer le calcul à l'écran immédiatement
+    executeActiveCalculation();
+
+    // Récupérer le prix de vente final calculé ou saisi pour le synchroniser dans `price_override`
+    let calculatedSellingPrice = AppState._selectedProduct.sellingPrice || 0;
+    
+    if (AppState.simMode === 'B') {
+        const ajustedCostCents = getAjustedCostCents();
+        const target = AppState._selectedProduct.targetMargin || 0;
+        const priceHtCents = target < 100 ? Math.round(ajustedCostCents / (1 - (target / 100))) : 0;
+        calculatedSellingPrice = PriceUtils.toEurosFloat(Math.round(priceHtCents * (1 + (AppState.simTva / 100))));
+    } else if (AppState.simMode === 'C') {
+        const ajustedCostCents = getAjustedCostCents();
+        const coeff = AppState._selectedProduct.targetCoeff || 1;
+        const priceHtCents = Math.round(ajustedCostCents * coeff);
+        calculatedSellingPrice = PriceUtils.toEurosFloat(Math.round(priceHtCents * (1 + (AppState.simTva / 100))));
+    }
+
+    // Sauvegarde en arrière-plan (sans bloquer l'UI) dans Supabase
+    try {
+        await supabaseClient
+            .from('products')
+            .update({
+                price_override: calculatedSellingPrice,
+                // On pousse les critères de simulation avancés dans un champ métadonnées ou localisé pour ne rien perdre
+                tva: AppState.simTva,
+                category: JSON.stringify({
+                    mode: AppState.simMode,
+                    pertes: AppState._selectedProduct.pertes || 0,
+                    targetMargin: AppState._selectedProduct.targetMargin || 70,
+                    targetCoeff: AppState._selectedProduct.targetCoeff || 3.5
+                })
+            })
+            .eq('id', AppState._selectedProduct.id);
+    } catch (err) {
+        console.error("Erreur de synchronisation de la simulation :", err.message);
+    }
 }
 
 function handlePertesInput() {
@@ -166,12 +182,8 @@ function handlePertesInput() {
     const percent = parseFloat(inputPertes.value);
     document.getElementById('pertes-value').textContent = `${percent}%`;
 
-    const savedPertes = JSON.parse(localStorage.getItem('margot_saved_product_pertes') || '{}');
-    savedPertes[AppState._selectedProduct.id] = percent;
-    localStorage.setItem('margot_saved_product_pertes', JSON.stringify(savedPertes));
-    
-    // On recalcule immédiatement la vue active car le coût ajusté vient de bouger !
-    executeActiveCalculation();
+    // On utilise le debounce ou un appel direct pour la modification des pertes
+    handleInputChange('pertes');
 }
 
 function switchMarginMode(mode) {
@@ -185,13 +197,11 @@ function switchMarginMode(mode) {
     const inputsB = document.getElementById('inputs-mode-b');
     const inputsC = document.getElementById('inputs-mode-c');
 
-    // Reset styles des boutons
     [btnA, btnB, btnC].forEach(b => {
         if(b) b.className = "py-2.5 text-xs font-bold rounded-lg text-slate-400 cursor-pointer px-4";
     });
     [inputsA, inputsB, inputsC].forEach(i => { if(i) i.classList.add('hidden'); });
 
-    // Activation visuelle du mode sélectionné
     const activeBtn = document.getElementById(`btn-mode-${mode.toLowerCase()}`);
     const activeInputs = document.getElementById(`inputs-mode-${mode.toLowerCase()}`);
     
@@ -213,7 +223,6 @@ function setSimTva(tvaValue) {
     executeActiveCalculation();
 }
 
-// OBTENIR LE COUT REEL PRENANT EN COMPTE LE CURSEUR DES PERTES
 function getAjustedCostCents() {
     const costCents = AppState.getProductCostCents(AppState._selectedProduct);
     const inputPertes = document.getElementById('input-pertes-slider');
@@ -221,7 +230,6 @@ function getAjustedCostCents() {
     return Math.round(costCents * (1 + (pertesPercent / 100)));
 }
 
-// MODE A : Prix fixe TTC saisi au clavier
 function calculateOutputsModeA() {
     if (!AppState._selectedProduct) return;
     
@@ -235,7 +243,6 @@ function calculateOutputsModeA() {
     renderSimulationCard(priceTtcCents, priceHtCents, priceTtcCents - priceHtCents, ajustedCostCents, priceHtCents - ajustedCostCents, marginPercent);
 }
 
-// MODE B : Pourcentage de marge via Slider
 function calculateOutputsModeB() {
     if (!AppState._selectedProduct) return;
     
@@ -252,7 +259,6 @@ function calculateOutputsModeB() {
     renderSimulationCard(priceTtcCents, priceHtCents, priceTtcCents - priceHtCents, ajustedCostCents, priceHtCents - ajustedCostCents, target);
 }
 
-// NOUVEAU - MODE C : Multiplicateur de coefficient (Ex: Coût x 4)
 function calculateOutputsModeC() {
     if (!AppState._selectedProduct) return;
     
@@ -271,7 +277,6 @@ function renderSimulationCard(ttcCents, htCents, tvaCents, costCents, marginCent
     const card = document.getElementById('result-card'); 
     if (!card) return;
 
-    // --- 1. DÉFINITION DES PALIERS DE RENTABILITÉ (BADGES COULEUR) ---
     let badgeColor = "";
     let badgeText = "";
     let borderColor = "";
@@ -294,10 +299,8 @@ function renderSimulationCard(ttcCents, htCents, tvaCents, costCents, marginCent
         bgColor = "bg-emerald-500/5";
     }
 
-    // --- 2. CALCUL DU SEUIL DE RENTABILITÉ EN VOLUME ---
     let seuilVolumeHtml = "";
     if (htCents > 0 && costCents > 0) {
-        // Combien d'unités sur 100 vendues servent UNIQUEMENT à payer les ingrédients
         const unitesPourCout = Math.ceil((costCents / htCents) * 100);
         
         if (unitesPourCout <= 100) {
@@ -308,7 +311,6 @@ function renderSimulationCard(ttcCents, htCents, tvaCents, costCents, marginCent
                 </div>
             `;
         } else {
-            // Si le coût est supérieur au prix HT (Vente à perte)
             seuilVolumeHtml = `
                 <div class="mt-3 pt-3 border-t border-slate-800/60 text-[11px] text-rose-400 font-medium">
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5 inline text-rose-400 mr-1 align-middle"></i>
@@ -318,7 +320,6 @@ function renderSimulationCard(ttcCents, htCents, tvaCents, costCents, marginCent
         }
     }
 
-    // --- 3. INJECTION DU CODE HTML MIS À JOUR ---
     card.className = `p-5 rounded-2xl border ${borderColor} ${bgColor} space-y-3.5 transition-all duration-300`;
     
     card.innerHTML = `

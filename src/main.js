@@ -360,13 +360,27 @@ async function routeUser() {
             
             if (cloudProducts && cloudProducts.length > 0) {
                 hasCloudData = true;
-                AppState.products = cloudProducts.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    ingredients: p.components, 
-                    sellingPrice: p.price_override,
-                    tva: p.tva
-                }));
+                AppState.products = cloudProducts.map(p => {
+                    // Tenter de décoder les options de marge stockées dans le champ category
+                    let metaSim = {};
+                    try {
+                        if (p.category && p.category.startsWith('{')) {
+                            metaSim = JSON.parse(p.category);
+                        }
+                    } catch(e) { metaSim = {}; }
+
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        ingredients: p.components, 
+                        sellingPrice: p.price_override,
+                        tva: p.tva,
+                        // Injection des critères mémorisés dans le Cloud
+                        pertes: metaSim.pertes !== undefined ? metaSim.pertes : 0,
+                        targetMargin: metaSim.targetMargin !== undefined ? metaSim.targetMargin : 70,
+                        targetCoeff: metaSim.targetCoeff !== undefined ? metaSim.targetCoeff : 3.5
+                    };
+                });
             }
         } catch (syncError) {
             console.error("Impossible de récupérer les données en ligne :", syncError.message);
