@@ -315,7 +315,10 @@ function addOnboardCustomIngredient() {
     document.getElementById('onboard-custom-ingredients-tags')?.appendChild(tag);
 }
 
-function finalizeOnboarding() {
+// 🚀 AJOUT : Importation du client Supabase tout en haut ou directement dans la fonction
+import { supabaseClient } from '../store/supabaseClient.js'; 
+
+async function finalizeOnboarding() {
     if (!AppState.onboardSelectedJobId) {
         callGlobal('showToast', 'Veuillez sélectionner un univers métier');
         showOnboardingStep(1);
@@ -323,63 +326,124 @@ function finalizeOnboarding() {
     }
 
     try {
-        const productCheckboxes = document.querySelectorAll('#products-checkbox-list input[type="checkbox"]:checked');
-        const defaultProducts = Array.from(productCheckboxes).map(cb => {
-            return {
-                id: 'p_' + Math.random().toString(36).substr(2, 9),
-                name: cb.value,
-                icon: cb.dataset.icon || 'shopping-bag',
-                ingredients: [], 
-                sellingPrice: 0,
-                tva: 10
-            };
-        });
+        callGlobal('showToast', 'Nettoyage et initialisation du catalogue...', 'info');
 
-        const customProducts = (AppState.onboardCustomProducts || []).map(name => ({
-            id: 'p_' + Math.random().toString(36).substr(2, 9),
-            name: name,
-            icon: 'sparkles', 
-            ingredients: [],
-            sellingPrice: 0,
-            tva: 10
+        // --------------------------------------------------------
+        // 1. NETTOYAGE SÉCURISÉ DES ANCIENNES DONNÉES CLOUD
+        // --------------------------------------------------------
+        // On récupère la session pour s'assurer d'effacer uniquement le catalogue de l'artisan connecté
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        if (session?.user?.id) {
+            // Supprime les anciens ingrédients liés à cet utilisateur
+            const { error: delIngError } = await supabaseClient
+                .from('ingredients')
+                .delete()
+                .eq('user_id', session.user.id);
+            if (delIngError) console.warn("Note nettoyage ingrédients :", delIngError.message);
+
+            // Supprime les anciens produits liés à cet utilisateur
+            const { error: delProdError } = await supabaseClient
+                .from('products')
+                .delete()
+                .eq('user_id', session.user.id);
+            if (delProdError) console.warn("Note nettoyage produits :", delProdError.message);
+        }
+
+        // --------------------------------------------------------
+        // 2. PRÉPARATION & ENVOI DES INGRÉDIENTS (MATIÈRES PREMIÈRES)
+        // --------------------------------------------------------
+        const ingredientCheckboxes = document.querySelectorAll('#ingredients-checkbox-list input[type="checkbox"]:checked');
+        
+        // Liste par défaut issue du catalogue prédéfini
+        const defaultIngredientsRaw = Array.from(ingredientCheckboxes).map(cb => ({
+            name: cb.value,
+            price: 0, 
+            qty: 1,
+            unit: cb.dataset.unit || 'kg'
         }));
 
-        AppState.products = [...defaultProducts, ...customProducts];
-
-        const ingredientCheckboxes = document.querySelectorAll('#ingredients-checkbox-list input[type="checkbox"]:checked');
-        const defaultIngredients = Array.from(ingredientCheckboxes).map(cb => {
-            return {
-                id: 'i_' + Math.random().toString(36).substr(2, 9),
-                name: cb.value,
-                price: 0, 
-                qty: 1,
-                unit: cb.dataset.unit || 'kg'
-            };
-        });
-
-        const customIngredients = (AppState.onboardCustomIngredients || []).map(ing => ({
-            id: 'i_' + Math.random().toString(36).substr(2, 9),
+        // Liste des ingrédients sur-mesure ajoutés manuellement par l'artisan
+        const customIngredientsRaw = (AppState.onboardCustomIngredients || []).map(ing => ({
             name: ing.name,
             price: 0,
             qty: 1,
             unit: ing.unit || 'kg'
         }));
 
-        AppState.ingredients = [...defaultIngredients, ...customIngredients];
+        // Fusion sans ID fictif pour laisser Supabase générer de vrais UUID valides
+        const allIngredientsToCloud = [...defaultIngredientsRaw, ...customIngredientsRaw];
 
+        // Envoi groupé à Supabase
+        const { data: insertedIngredients, error: ingError } = await supabaseClient
+            .from('ingredients')
+            .insert(allIngredientsToCloud)
+            .select(); // Retourne les lignes créées avec leurs UUID officiels
+
+        if (ingError) throw ingError;
+        
+        // Mise à jour de l'état global avec les ingrédients du Cloud
+        AppState.ingredients = insertedIngredients || [];
+
+
+        // --------------------------------------------------------
+        // 3. PRÉPARATION & ENVOI DES PRODUITS (FICHES TECHNIQUES)
+        // --------------------------------------------------------
+        const productCheckboxes = document.querySelectorAll('#products-checkbox-list input[type="checkbox"]:checked');
+        
+        // Liste des produits par défaut cochés
+        const defaultProductsRaw = Array.from(productCheckboxes).map(cb => ({
+            name: cb.value,
+            components: JSON.stringify([]), // Tableau d'ingrédients vide pour commencer
+            price_override: 0,
+            tva: 10
+        }));
+
+        // Liste des produits personnalisés ajoutés par l'artisan
+        const customProductsRaw = (AppState.onboardCustomProducts || []).map(name => ({
+            name: name,
+            components: JSON.stringify([]),
+            price_override: 0,
+            tva: 10
+        }));
+
+        const allProductsToCloud = [...defaultProductsRaw, ...customProductsRaw];
+
+        // Envoi groupé à Supabase
+        const { data: insertedProducts, error: prodError } = await supabaseClient
+            .from('products')
+            .insert(allProductsToCloud)
+            .select();
+
+        if (prodError) throw prodError;
+
+        // Formater les données reçues du Cloud pour l'interface de l'application
+        AppState.products = (insertedProducts || []).map(p => ({
+            id: p.id, // Vrai UUID Supabase exploitable sans plantage
+            name: p.name,
+            ingredients: p.components, 
+            sellingPrice: p.price_override,
+            tva: p.tva
+        }));
+
+        // --------------------------------------------------------
+        // 4. PERSISTANCE LOCALE DE SECOURS ET REMISE EN ROUTE UI
+        // --------------------------------------------------------
         localStorage.setItem('margot_ingredients', JSON.stringify(AppState.ingredients));
         localStorage.setItem('margot_products', JSON.stringify(AppState.products));
 
+        // On valide le profil de l'appareil
+        AppState.setProfileConfigured(true);
+
+        const appNav = document.getElementById('app-nav');
+        if (appNav) appNav.classList.remove('hidden');
+
+        // Changement d'écran et message de succès
+        callGlobal('switchScreen', 'products');
+        callGlobal('showToast', 'Votre nouvel espace Margot est prêt et synchronisé !', 'success');
+
     } catch (error) {
-        console.error("Erreur lors de la récupération du catalogue :", error);
+        console.error("Erreur lors de la finalisation de l'onboarding :", error);
+        callGlobal('showToast', "Erreur de synchronisation Cloud lors de la création de l'espace", 'error');
     }
-
-    AppState.setProfileConfigured(true);
-
-    const appNav = document.getElementById('app-nav');
-    if (appNav) appNav.classList.remove('hidden');
-
-    // Résolution de la boucle circulaire via les fonctions partagées sur l'objet window
-    callGlobal('switchScreen', 'products');
-    callGlobal('showToast', 'Votre espace Margot est prêt !');
 }
