@@ -266,18 +266,28 @@ function setupGlobalEvents() {
                 return;
             }
 
+            // 🔒 Récupération du jeton hCaptcha obligatoire pour valider la requête
+            const captchaToken = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : null;
+            if (!captchaToken) {
+                alert("Veuillez cocher la case 'Je ne suis pas un robot' avant de cliquer sur mot de passe oublié.");
+                return;
+            }
+
             const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
             if (!supabaseInstance) return;
 
             try {
                 const { error } = await supabaseInstance.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin
+                    redirectTo: window.location.origin,
+                    options: { captchaToken: captchaToken } // 👈 Transmission sécurisée du jeton à Supabase
                 });
 
                 if (error) throw error;
                 alert("Un e-mail de réinitialisation vous a été envoyé. Cliquez sur le lien s'y trouvant pour modifier votre mot de passe.");
             } catch (error) {
                 alert(`Erreur : ${error.message}`);
+                // 🔄 Réinitialise le captcha en cas d'erreur pour permettre un nouvel essai
+                if (typeof hcaptcha !== 'undefined') hcaptcha.reset();
             }
         });
     }
