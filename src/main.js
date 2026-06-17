@@ -266,10 +266,12 @@ function setupGlobalEvents() {
                 return;
             }
 
-            // 🔒 Récupération du jeton hCaptcha obligatoire pour valider la requête
-            const captchaToken = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : null;
+            // 🔒 Récupération du jeton hCaptcha
+            let captchaToken = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : null;
+            
+            // Si le token est vide ou a expiré, on demande explicitement à l'utilisateur de cocher la case
             if (!captchaToken) {
-                alert("Veuillez cocher la case 'Je ne suis pas un robot' avant de cliquer sur mot de passe oublié.");
+                alert("Veuillez cocher la case 'Je ne suis pas un robot' (hCaptcha) juste au-dessus pour autoriser l'envoi de l'e-mail.");
                 return;
             }
 
@@ -277,16 +279,21 @@ function setupGlobalEvents() {
             if (!supabaseInstance) return;
 
             try {
+                // Double sécurité : on injecte le token selon les deux normes de l'API Supabase
                 const { error } = await supabaseInstance.auth.resetPasswordForEmail(email, {
                     redirectTo: window.location.origin,
-                    options: { captchaToken: captchaToken } // 👈 Transmission sécurisée du jeton à Supabase
+                    captchaToken: captchaToken, // Norme V2 récente
+                    options: { 
+                        captchaToken: captchaToken // Ancienne norme / alternative
+                    }
                 });
 
                 if (error) throw error;
                 alert("Un e-mail de réinitialisation vous a été envoyé. Cliquez sur le lien s'y trouvant pour modifier votre mot de passe.");
             } catch (error) {
                 alert(`Erreur : ${error.message}`);
-                // 🔄 Réinitialise le captcha en cas d'erreur pour permettre un nouvel essai
+            } finally {
+                // 🔄 On réinitialise TOUJOURS le hCaptcha après une tentative pour éviter les jetons périmés
                 if (typeof hcaptcha !== 'undefined') hcaptcha.reset();
             }
         });
