@@ -255,6 +255,96 @@ function setupGlobalEvents() {
         });
     }
 
+    // --- ACTION : DEMANDE DE MOT DE PASSE OUBLIÉ ---
+    const btnForgotPassword = document.getElementById('btn-forgot-password');
+    if (btnForgotPassword) {
+        btnForgotPassword.addEventListener('click', async () => {
+            const email = document.getElementById('auth-email')?.value.trim();
+            
+            if (!email) {
+                alert("Veuillez d'abord saisir votre adresse e-mail dans le champ ci-dessus.");
+                return;
+            }
+
+            const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+            if (!supabaseInstance) return;
+
+            try {
+                const { error } = await supabaseInstance.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin
+                });
+
+                if (error) throw error;
+                alert("Un e-mail de réinitialisation vous a été envoyé. Cliquez sur le lien s'y trouvant pour modifier votre mot de passe.");
+            } catch (error) {
+                alert(`Erreur : ${error.message}`);
+            }
+        });
+    }
+
+    // --- ACTION : MODIFICATION DE L'EMAIL DEPUIS LES PARAMÈTRES ---
+    const btnUpdateEmail = document.getElementById('btn-update-email');
+    if (btnUpdateEmail) {
+        btnUpdateEmail.addEventListener('click', async () => {
+            const newEmail = document.getElementById('settings-email')?.value.trim();
+            if (!newEmail) {
+                alert("Veuillez saisir une adresse e-mail valide.");
+                return;
+            }
+
+            const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+            if (!supabaseInstance) return;
+
+            try {
+                const { error } = await supabaseInstance.auth.updateUser({ email: newEmail });
+                if (error) throw error;
+                
+                alert("Une demande de confirmation a été envoyée à votre ancienne ET votre nouvelle adresse e-mail. Le changement sera effectif après validation des deux liens.");
+                document.getElementById('settings-email').value = "";
+            } catch (error) {
+                alert(`Erreur : ${error.message}`);
+            }
+        });
+    }
+
+    // --- ACTION : MODIFICATION DU MOT DE PASSE DEPUIS LES PARAMÈTRES ---
+    const btnUpdatePassword = document.getElementById('btn-update-password');
+    if (btnUpdatePassword) {
+        btnUpdatePassword.addEventListener('click', async () => {
+            const newPassword = document.getElementById('settings-password')?.value;
+            
+            if (!newPassword) {
+                alert("Veuillez renseigner un mot de passe.");
+                return;
+            }
+
+            // Application de tes règles strictes de sécurité à 12 caractères
+            if (newPassword.length < 12) {
+                alert("Sécurité : Le mot de passe doit contenir au moins 12 caractères.");
+                return;
+            }
+
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+            if (!passwordRegex.test(newPassword)) {
+                alert("Sécurité : Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule et un chiffre.");
+                return;
+            }
+
+            const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+            if (!supabaseInstance) return;
+
+            try {
+                const { error } = await supabaseInstance.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+                
+                showToast("Mot de passe mis à jour !");
+                document.getElementById('settings-password').value = "";
+            } catch (error) {
+                alert(`Erreur : ${error.message}`);
+            }
+        });
+    }
+
     // --- GESTION DES ACTIONS SUPABASE (CONNEXION & INSCRIPTION) ---
     const btnAuthSubmit = document.getElementById('btn-auth-submit');
     if (btnAuthSubmit) {
@@ -362,6 +452,36 @@ async function routeUser() {
             setTimeout(routeUser, 200);
             return;
         }
+
+        // --- NOUVEAU : CAPTURER L'ÉVÉNEMENT DE RÉCUPÉRATION DE MOT DE PASSE (PASSWORD RECOVERY) ---
+        supabaseInstance.auth.onAuthStateChange(async (event, session) => {
+            if (event === "PASSWORD_RECOVERY") {
+                const newPassword = prompt("Veuillez saisir votre nouveau mot de passe (12 caractères min, avec Majuscule, Minuscule et Chiffre) :");
+                
+                if (!newPassword) {
+                    alert("Procédure annulée. Le mot de passe n'a pas été modifié.");
+                    return;
+                }
+
+                // Règles strictes Margot
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+                if (newPassword.length < 12 || !passwordRegex.test(newPassword)) {
+                    alert("Sécurité insuffisante (12 caractères, Maj, Min, Chiffre requis). Le mot de passe n'a pas été modifié. Veuillez recommencer la procédure.");
+                    return;
+                }
+
+                try {
+                    const { error } = await supabaseInstance.auth.updateUser({ password: newPassword });
+                    if (error) throw error;
+                    
+                    alert("Votre mot de passe a été modifié avec succès ! Vous pouvez maintenant vous connecter.");
+                    await supabaseInstance.auth.signOut();
+                    window.location.reload();
+                } catch (err) {
+                    alert(`Erreur lors de la mise à jour : ${err.message}`);
+                }
+            }
+        });
 
         // 1. On demande à Supabase s'il y a une session active
         const { data: { session } } = await supabaseInstance.auth.getSession();
