@@ -34,30 +34,6 @@
             </div>
         </header>
 
-        <div class="p-4">
-            <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-2xl space-y-4 shadow-md">
-                <div class="space-y-1">
-                    <h4 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                        🔒 Sécurité des données
-                    </h4>
-                    <p class="text-xs text-slate-400">Vos données sont stockées localement sur cet appareil et ne transitent jamais sur Internet.</p>
-                </div>
-                
-                <div id="backup-section" class="grid grid-cols-2 gap-3 hidden">
-    <button id="btn-export-backup" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        <span>Sauvegarder (Exporter)</span>
-    </button>
-    
-    <button id="btn-trigger-import" class="bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 border border-slate-600/30 py-3 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer">
-        <i data-lucide="upload" class="w-4 h-4"></i>
-        <span>Restaurer (Importer)</span>
-    </button>
-</div>
-                <input type="file" id="input-import-file" accept=".json" class="hidden">
-            </div>
-        </div>
-
         <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] hidden" role="status" aria-live="polite">
             <div class="bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
                 <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="toast-msg">Enregistré</span>
@@ -366,6 +342,10 @@
                 <span>Réinitialiser toute l'application</span>
             </button>
         </div>
+        <button id="btn-logout" class="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 py-3 rounded-xl cursor-pointer text-center font-medium transition-all border border-slate-800 flex items-center justify-center gap-2">
+    <i data-lucide="log-out" class="w-4 h-4"></i>
+    <span>Se déconnecter de mon compte</span>
+</button>
 </section>
         </main>
 

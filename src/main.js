@@ -6,12 +6,6 @@ import { renderProducts, initProductsEvents } from './components/products.js';
 import { populateMarginDropdown, initMarginsEvents } from './components/margins.js';
 import { populatePlannerInputs, initPlannerEvents } from './components/planner.js';
 
-// --- CONSTANTES GLOBALES DE CONFIGURATION ---
-const LOCAL_STORAGE_KEYS = {
-    ingredients: 'margot_ingredients', // Synchronisé avec onboarding.js
-    products: 'margot_products'        // Synchronisé avec onboarding.js
-};
-
 let _lucidePending = false;
 let authMode = 'login'; // <-- CORRECTION : Déplacé ici pour être accessible partout dans le fichier
 
@@ -111,16 +105,6 @@ export function switchScreen(screenId) {
         else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
     }
 
-    // --- LE COMPORTEMENT DE LA SAUVEGARDE SYNCHRONISÉ ICI ---
-    const backupSection = document.getElementById('backup-section');
-    if (backupSection) {
-        if (AppState.profileConfigured && screenId !== 'onboarding' && screenId !== 'auth') {
-            backupSection.classList.remove('hidden');
-        } else {
-            backupSection.classList.add('hidden');
-        }
-    }
-
     // Déclenchement des rendus selon l'écran actif
     if (screenId === 'ingredients') renderIngredients();
     if (screenId === 'products') {
@@ -175,6 +159,35 @@ function setupGlobalEvents() {
             switchScreen('products');
         });
     }
+    
+    // --- NOUVEAU : BOUTON SE DÉCONNECTER (SUPABASE) ---
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            const confirmLogout = await showConfirm("Voulez-vous vous déconnecter de votre espace Margot ?", false);
+            
+            if (confirmLogout) {
+                const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+                if (supabaseInstance) {
+                    // 1. On ordonne à Supabase de fermer la session Cloud
+                    await supabaseInstance.auth.signOut();
+                }
+
+                // 2. On nettoie TOUT le cache local pour ne laisser aucune trace sur le navigateur
+                localStorage.clear(); 
+
+                // 3. On vide instantanément l'état de l'application
+                AppState.ingredients = [];
+                AppState.products = [];
+                AppState.profileConfigured = false;
+
+                // 4. On masque la navigation et on redirige vers l'écran de connexion
+                document.getElementById('app-nav')?.classList.add('hidden');
+                switchScreen('auth');
+                showToast('Vous avez été déconnecté');
+            }
+        });
+    }
 
     // --- NOUVEAU : RÉINITIALISATION TOTALE ET DESTRUCTIVE ---
     const btnDangerReset = document.getElementById('btn-danger-reset');
@@ -194,8 +207,8 @@ function setupGlobalEvents() {
                 }
                 localStorage.setItem('margot_profile_done', 'false'); // 👈 CRUCIAL : Informe le système de bloquer la resync au refresh
                 
-                localStorage.removeItem(LOCAL_STORAGE_KEYS.ingredients);
-                localStorage.removeItem(LOCAL_STORAGE_KEYS.products);
+                localStorage.removeItem('margot_ingredients');
+                localStorage.removeItem('margot_products');
                 localStorage.removeItem('margot_shop_name');
 
                 // Vider l'état mémoire instantanément
@@ -203,7 +216,6 @@ function setupGlobalEvents() {
                 AppState.products = [];
 
                 document.getElementById('app-nav')?.classList.add('hidden');
-                document.getElementById('backup-section')?.classList.add('hidden');
                 
                 updateHeaderShopName(); // Nettoie et masque le nom statique
 
@@ -318,8 +330,6 @@ function setupGlobalEvents() {
 
 // --- LOGIQUE DE ROUTAGE ET SYNCHRONISME DES DONNÉES CLOUD ---
 async function routeUser() {
-    const backupSection = document.getElementById('backup-section');
-
     try {
         const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
 
@@ -335,7 +345,6 @@ async function routeUser() {
         // ÉTAPE 1 : Si l'artisan n'est PAS connecté -> Direction l'écran Auth
         if (!session) {
             document.getElementById('app-nav')?.classList.add('hidden');
-            backupSection?.classList.add('hidden');
             switchScreen('auth');
             return; 
         }
@@ -347,7 +356,6 @@ async function routeUser() {
             AppState.ingredients = [];
             AppState.products = [];
             document.getElementById('app-nav')?.classList.add('hidden');
-            backupSection?.classList.add('hidden');
             switchScreen('onboarding');
             showOnboardingStep(1);
             initSwipeCommerce();
@@ -422,12 +430,10 @@ async function routeUser() {
         // ÉTAPE 2 : Routage vers le bon écran selon l'état du profil mis à jour
         if (AppState.profileConfigured) {
             document.getElementById('app-nav')?.classList.remove('hidden');
-            backupSection?.classList.remove('hidden');
             updateHeaderShopName(); 
             switchScreen('products');
         } else {
             document.getElementById('app-nav')?.classList.add('hidden');
-            backupSection?.classList.add('hidden');
             switchScreen('onboarding');
             showOnboardingStep(1);
             initSwipeCommerce();
@@ -437,118 +443,6 @@ async function routeUser() {
         console.error("Erreur lors du routage de l'utilisateur :", error);
         switchScreen('auth');
     }
-}
-
-// --- CONFIGURATION DE LA SAUVEGARDE ET SÉCURITÉ ---
-function initBackupSystem() {
-    const btnExport = document.getElementById('btn-export-backup');
-    const btnTriggerImport = document.getElementById('btn-trigger-import');
-    const inputImport = document.getElementById('input-import-file');
-
-    if (!btnExport || !btnTriggerImport || !inputImport) {
-        console.warn("Margot Sécurité : Les boutons de sauvegarde n'ont pas été trouvés dans le DOM.");
-        return;
-    }
-
-    btnExport.addEventListener('click', (e) => {
-        e.preventDefault();
-        try {
-            const ingredients = localStorage.getItem(LOCAL_STORAGE_KEYS.ingredients) || '[]';
-            const products = localStorage.getItem(LOCAL_STORAGE_KEYS.products) || '[]';
-
-            const backupData = {
-                version: "1.0",
-                exportDate: new Date().toISOString(),
-                data: {
-                    ingredients: JSON.parse(ingredients),
-                    products: JSON.parse(products)
-                }
-            };
-
-            const jsonString = JSON.stringify(backupData, null, 2);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            const dateStr = new Date().toISOString().split('T')[0];
-            a.href = url;
-            a.download = `margot-sauvegarde-${dateStr}.json`;
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("Sauvegarde exportée !");
-        } catch (error) {
-            console.error("Erreur lors du l'export :", error);
-            showToast("Impossible de générer la sauvegarde.");
-        }
-    });
-
-    btnTriggerImport.addEventListener('click', (e) => {
-        e.preventDefault();
-        inputImport.click();
-    });
-
-    inputImport.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const json = JSON.parse(e.target.result);
-                
-                if (!json.data || !json.data.ingredients || !json.data.products) {
-                    throw new Error("Format de fichier invalide : sections manquantes.");
-                }
-
-                if (!Array.isArray(json.data.ingredients) || !Array.isArray(json.data.products)) {
-                    throw new Error("Format de fichier corrompu : les données doivent être des tableaux.");
-                }
-
-                const confirmOverwrite = await showConfirm(
-                    "⚠️ L'importation va remplacer TOUTES vos fiches techniques et ingrédients actuels. Continuer ?",
-                    true
-                );
-
-                if (confirmOverwrite) {
-                    const sanitize = (str) => {
-                        if (typeof str !== 'string') return str;
-                        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    };
-
-                    const cleanIngredients = json.data.ingredients.map(ing => ({
-                        ...ing,
-                        name: sanitize(ing.name),
-                        unit: sanitize(ing.unit)
-                    }));
-
-                    const cleanProducts = json.data.products.map(prod => ({
-                        ...prod,
-                        name: sanitize(prod.name),
-                        category: sanitize(prod.category)
-                    }));
-
-                    try {
-                        localStorage.setItem(LOCAL_STORAGE_KEYS.ingredients, JSON.stringify(cleanIngredients));
-                        localStorage.setItem(LOCAL_STORAGE_KEYS.products, JSON.stringify(cleanProducts));
-                    } catch (storageError) {
-                        throw new Error("La mémoire de votre navigateur est saturée. Le fichier est trop lourd.");
-                    }
-                    
-                    showToast("Données restaurées ! Rechargement...");
-                    setTimeout(() => window.location.reload(), 1000);
-                }
-            } catch (error) {
-                console.error("Erreur lors de l'import :", error);
-                alert(`Impossible d'importer la sauvegarde : ${error.message || "Fichier corrompu"}`);
-            }
-            inputImport.value = "";
-        };
-        reader.readAsText(file);
-    });
 }
 
 // --- FONCTION D'INITIALISATION GLOBALE ---
@@ -564,7 +458,6 @@ async function init() {
     initMarginsEvents();
     initPlannerEvents();
     setupGlobalEvents();
-    initBackupSystem();
     
     await routeUser();
     refreshIcons();
@@ -596,15 +489,6 @@ function switchScreenFromHistory(screenId) {
     if (profileBtn) {
         if (screenId === 'onboarding' || screenId === 'auth') profileBtn.classList.add('hidden');
         else if (AppState.profileConfigured) profileBtn.classList.remove('hidden');
-    }
-
-    const backupSection = document.getElementById('backup-section');
-    if (backupSection) {
-        if (AppState.profileConfigured && screenId !== 'onboarding' && screenId !== 'auth') {
-            backupSection.classList.remove('hidden');
-        } else {
-            backupSection.classList.add('hidden');
-        }
     }
 
     if (screenId === 'ingredients') renderIngredients();
