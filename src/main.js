@@ -262,6 +262,9 @@ function setupGlobalEvents() {
             const email = document.getElementById('auth-email')?.value.trim();
             const password = document.getElementById('auth-password')?.value;
             
+            // 🔒 Récupération du jeton hCaptcha
+            const captchaToken = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : null;
+
             // Récupération sécurisée de l'instance Supabase connectée
             const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
 
@@ -274,38 +277,56 @@ function setupGlobalEvents() {
             const tabRegister = document.getElementById('tab-register');
             const isRegisterMode = tabRegister && tabRegister.classList.contains('text-emerald-400');
 
-            // Validation de base
+            // Validation des champs vides
             if (!email || !password) {
                 alert("Veuillez remplir tous les champs.");
                 return;
             }
 
-            if (password.length < 6) {
-                alert("Le mot de passe doit contenir au moins 6 caractères.");
+            // 🔒 Validation hCaptcha obligatoire
+            if (!captchaToken) {
+                alert("Veuillez cocher la case 'Je ne suis pas un robot' pour valider la sécurité.");
                 return;
+            }
+
+            // 🔒 Nouvelles règles de sécurité du mot de passe (appliquées uniquement à l'inscription)
+            if (isRegisterMode) {
+                if (password.length < 12) {
+                    alert("Sécurité : Le mot de passe doit contenir au moins 12 caractères.");
+                    return;
+                }
+
+                // Vérifie s'il y a au moins une majuscule, une minuscule, une lettre et un chiffre
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+                if (!passwordRegex.test(password)) {
+                    alert("Sécurité : Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule et un chiffre.");
+                    return;
+                }
             }
 
             // Désactivation temporaire du bouton pendant le chargement
             btnAuthSubmit.disabled = true;
             const originalText = btnAuthSubmit.innerHTML;
-            btnAuthSubmit.innerHTML = `<span>Chargement...</span>`;
+            btnAuthSubmit.innerHTML = `<span>Vérification...</span>`;
 
             try {
                 if (!isRegisterMode) {
-                    // --- TENTATIVE DE CONNEXION ---
+                    // --- TENTATIVE DE CONNEXION AVEC JETON CAPTCHA ---
                     const { data, error } = await supabaseInstance.auth.signInWithPassword({
                         email: email,
-                        password: password
+                        password: password,
+                        options: { captchaToken: captchaToken } // 👈 Transmission du jeton à Supabase
                     });
 
                     if (error) throw error;
                     showToast("Connexion réussie !");
                     
                 } else {
-                    // --- TENTATIVE D'INSCRIPTION ---
+                    // --- TENTATIVE D'INSCRIPTION AVEC JETON CAPTCHA ---
                     const { data, error } = await supabaseInstance.auth.signUp({
                         email: email,
-                        password: password
+                        password: password,
+                        options: { captchaToken: captchaToken } // 👈 Transmission du jeton à Supabase
                     });
 
                     if (error) throw error;
@@ -319,6 +340,9 @@ function setupGlobalEvents() {
             } catch (error) {
                 console.error("Erreur d'authentification :", error);
                 alert(`Erreur : ${error.message || "Impossible de s'authentifier"}`);
+                
+                // 🔄 Réinitialise le widget hCaptcha en cas d'échec pour permettre un nouvel essai immédiatement
+                if (typeof hcaptcha !== 'undefined') hcaptcha.reset();
             } finally {
                 // Réactivation du bouton
                 btnAuthSubmit.disabled = false;

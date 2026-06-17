@@ -6,6 +6,7 @@
     <title>Margot - Pilotage de Rentabilité</title>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 
     <link rel="stylesheet" href="./src/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -103,6 +104,10 @@
                     />
                 </div>
             </div>
+            <!-- La case hCaptcha (le design s'adaptera bien à ton app sombre si tu veux, ou reste standard) -->
+<div class="flex justify-center my-4">
+    <div class="h-captcha" id="auth-captcha" data-sitekey="96a8e4ec-81d0-4b76-a68c-2c2c24ec5200"></div>
+</div>
 
             <button 
                 id="btn-auth-submit" 
