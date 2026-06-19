@@ -135,12 +135,24 @@ function setupGlobalEvents() {
     // --- NOUVEAU : ÉCOUTEUR POUR ENREGISTRER LES MODIFICATIONS ---
     const btnSaveSettings = document.getElementById('btn-save-settings');
     if (btnSaveSettings) {
-        btnSaveSettings.addEventListener('click', () => {
+        btnSaveSettings.addEventListener('click', async () => {
             const newShopName = document.getElementById('settings-shop-name')?.value.trim();
             
             if (!newShopName) {
                 alert("Le nom du commerce ne peut pas être vide.");
                 return;
+            }
+
+            // 🌟 AJOUT : Sauvegarde également dans les user_metadata de Supabase pour persister au changement de compte
+            const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+            if (supabaseInstance) {
+                try {
+                    await supabaseInstance.auth.updateUser({
+                        data: { shop_name: newShopName }
+                    });
+                } catch (metaErr) {
+                    console.warn("Impossible de synchroniser le nom du commerce sur Supabase :", metaErr);
+                }
             }
 
             if (typeof AppState.setShopName === 'function') {
@@ -180,6 +192,7 @@ function setupGlobalEvents() {
                 AppState.ingredients = [];
                 AppState.products = [];
                 AppState.profileConfigured = false;
+                AppState.shopName = "";
 
                 // 4. On masque la navigation et on redirige vers l'écran de connexion
                 document.getElementById('app-nav')?.classList.add('hidden');
@@ -214,6 +227,7 @@ function setupGlobalEvents() {
                 // Vider l'état mémoire instantanément
                 AppState.ingredients = [];
                 AppState.products = [];
+                AppState.shopName = "";
 
                 document.getElementById('app-nav')?.classList.add('hidden');
                 
@@ -435,7 +449,7 @@ function setupGlobalEvents() {
                         password: password,
                         options: { 
                             captchaToken: captchaToken,
-                            redirectTo: window.location.origin // 🌟 CORRECTION : Force la redirection vers l'adresse exacte d'où est émise la demande !
+                            redirectTo: window.location.origin // 🌟 FORCE la redirection vers l'adresse exacte d'où est émise la demande !
                         }
                     });
 
@@ -511,6 +525,17 @@ async function routeUser() {
             document.getElementById('app-nav')?.classList.add('hidden');
             switchScreen('auth');
             return; 
+        }
+
+        // 🌟 NOUVEAU & CORRECTIF CACHE : Récupération dynamique du nom du commerce depuis les métadonnées de la session active
+        const userShopName = session.user.user_metadata?.shop_name;
+        if (userShopName) {
+            AppState.shopName = userShopName;
+            localStorage.setItem('margot_shop_name', userShopName);
+        } else {
+            // Si aucun nom n'est défini dans le compte en ligne, on nettoie l'ancien cache pour éviter les conflits
+            AppState.shopName = "";
+            localStorage.removeItem('margot_shop_name');
         }
 
         // 🚀 AJOUT : ANNIHILATION DU TÉLÉCHARGEMENT EN MODE ONBOARDING/RÉINITIALISATION
