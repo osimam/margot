@@ -12,22 +12,23 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center antialiased font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center antialiased font-sans overscroll-none">
 
-    <div class="w-full max-w-md md:max-w-3xl bg-slate-900 min-h-screen flex flex-col relative pb-4 shadow-2xl border-x border-slate-800 transition-all">
+    <div class="w-full max-w-md md:max-w-3xl bg-slate-900 min-h-screen flex flex-col relative pb-24 shadow-2xl border-x border-slate-800 transition-all">
 
-        <header class="p-5 border-b border-slate-800/80 bg-slate-900/80 sticky top-0 backdrop-blur-md z-30 flex justify-between items-center">
+        <!-- HEADER ADAPTÉ SMARTPHONE -->
+        <header class="p-4 border-b border-slate-800/80 bg-slate-900/80 sticky top-0 backdrop-blur-md z-30 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-black text-emerald-400 tracking-wide flex items-center gap-2">
-                    <i data-lucide="calculator" class="w-6 h-6 text-emerald-400"></i> Margot
+                <h1 class="text-xl font-black text-emerald-400 tracking-wide flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5 text-emerald-400"></i> Margot
                 </h1>
-                <p class="text-xs text-slate-400 font-medium">Gestion & Marges Artisans</p>
+                <p class="text-[10px] text-slate-400 font-medium">Gestion & Marges Artisans</p>
                 <span id="app-shop-name" class="text-[11px] font-semibold text-slate-400 border-l border-slate-800 pl-2.5 ml-0.5 hidden transition-all">
                 </span>
             </div>
-            <div class="flex flex-col items-end gap-1.5">
-                <div class="bg-slate-800 border border-slate-700/60 px-3 py-1 rounded-full text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Production v2.1
+            <div class="flex flex-col items-end gap-1">
+                <div class="bg-slate-800 border border-slate-700/60 px-2.5 py-0.5 rounded-full text-[9px] font-bold text-slate-300 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> v2.1
                 </div>
                 <button id="btn-edit-profile" class="hidden text-[10px] text-slate-400 hover:text-amber-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer">
                     <i data-lucide="settings-2" class="w-3 h-3"></i> Modifier mon profil
@@ -35,108 +36,98 @@
             </div>
         </header>
 
-        <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] hidden" role="status" aria-live="polite">
-            <div class="bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
-                <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="toast-msg">Enregistré</span>
+        <!-- TOAST NOTIFICATION -->
+        <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] hidden w-auto max-w-xs" role="status" aria-live="polite">
+            <div class="bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i> <span id="toast-msg">Enregistré</span>
             </div>
         </div>
 
-        <div id="modal-confirm" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
-                <p id="confirm-msg" class="text-sm text-slate-200 text-center"></p>
+        <!-- MODAL CONFIRMATION TYPE BOTTOM-SHEET MOBILE -->
+        <div id="modal-confirm" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] hidden flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl animate-slideUp">
+                <p id="confirm-msg" class="text-sm text-slate-200 text-center font-medium"></p>
                 <div class="flex gap-2 text-xs font-bold">
-                    <button id="confirm-cancel-btn" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button>
-                    <button id="confirm-action-btn" class="w-1/2 bg-rose-600 text-white py-2.5 rounded-xl cursor-pointer">Confirmer</button>
+                    <button id="confirm-cancel-btn" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-slate-300 py-3 rounded-xl cursor-pointer transition-colors">Annuler</button>
+                    <button id="confirm-action-btn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-xl cursor-pointer transition-colors">Confirmer</button>
                 </div>
             </div>
         </div>
 
-        <main class="flex-1 p-4 overflow-y-auto space-y-6">
-            <section id="screen-auth" class="min-h-[80vh] flex flex-col justify-center max-w-md mx-auto px-6 py-8 space-y-6 animate-fadeIn">
-    
-    <div class="text-center space-y-2">
-        <h2 class="text-3xl font-black tracking-wider uppercase bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-            Margot
-        </h2>
-        <p class="text-xs text-slate-400 font-medium max-w-[280px] mx-auto" id="auth-subtitle">
-            Pilotez la rentabilité de votre commerce et sécurisez vos marges en temps réel.
-        </p>
-    </div>
-
-    <div class="bg-slate-900/40 border border-slate-900 rounded-2xl p-5 space-y-4 backdrop-blur-sm">
-        
-        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-900">
-            <button id="tab-login" class="w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-900 text-emerald-400 transition-all cursor-pointer">
-                Connexion
-            </button>
-            <button id="tab-register" class="w-1/2 py-2 text-xs font-bold uppercase tracking-wider rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer">
-                Inscription
-            </button>
-        </div>
-
-        <div class="space-y-4 pt-2">
-            <div class="space-y-1.5">
-                <label for="auth-email" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
-                    Adresse E-mail
-                </label>
-                <div class="relative flex items-center">
-                    <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-4"></i>
-                    <input 
-                        type="email" 
-                        id="auth-email" 
-                        placeholder="artisan@moncommerce.fr" 
-                        class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
-                    />
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <label for="auth-password" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
-                    Mot de passe
-                </label>
-                <div class="relative flex items-center">
-                    <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-4"></i>
-                    <input 
-                        type="password" 
-                        id="auth-password" 
-                        placeholder="••••••••" 
-                        class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
-                    />
-                </div>
-                <!-- Lien Mot de passe oublié -->
-                <div class="text-right pt-0.5">
-                    <button type="button" id="btn-forgot-password" class="text-[10px] font-semibold text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer">
-                        Mot de passe oublié ?
-                    </button>
-                </div>
-            </div>
-
-            <!-- La case hCaptcha -->
-            <div class="flex justify-center my-4">
-                <div class="h-captcha" id="auth-captcha" data-sitekey="96a8e4ec-81d0-4b76-a68c-2c2c24ec5200"></div>
-            </div>
-
-            <button 
-                id="btn-auth-submit" 
-                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/10 transition-all cursor-pointer mt-2 flex items-center justify-center gap-2"
-            >
-                <i data-lucide="log-in" class="w-4 h-4" id="btn-auth-icon"></i>
-                <span id="btn-auth-text">Se connecter à mon espace</span>
-            </button>
-        </div>
-    </div>
-
-    <p class="text-[10px] text-slate-500 text-center leading-relaxed max-w-[300px] mx-auto">
-        En vous connectant, vos fiches techniques et ingrédients sont automatiquement chiffrés et sauvegardés dans le Cloud.
-    </p>
-</section>
+        <!-- CONTENU PRINCIPAL SÉCURISÉ POUR LE DÉFILEMENT TACTILE -->
+        <main class="flex-1 p-4 overflow-y-auto space-y-6 pb-12">
             
-            <section id="screen-onboarding" class="space-y-6 py-4 animate-fade-in">
-                <div class="text-center space-y-2 px-2">
+            <!-- ÉCRAN : AUTHENTIFICATION -->
+            <section id="screen-auth" class="min-h-[70vh] flex flex-col justify-center max-w-md mx-auto px-2 py-4 space-y-5">
+                <div class="text-center space-y-1">
+                    <h2 class="text-2xl font-black tracking-wider uppercase bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                        Margot
+                    </h2>
+                    <p class="text-xs text-slate-400 font-medium max-w-[280px] mx-auto" id="auth-subtitle">
+                        Pilotez la rentabilité de votre commerce et sécurisez vos marges en temps réel.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 space-y-4 backdrop-blur-sm">
+                    <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-900">
+                        <button id="tab-login" class="w-1/2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-900 text-emerald-400 transition-all cursor-pointer">
+                            Connexion
+                        </button>
+                        <button id="tab-register" class="w-1/2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg text-slate-500 hover:text-slate-300 transition-all cursor-pointer">
+                            Inscription
+                        </button>
+                    </div>
+
+                    <div class="space-y-4 pt-1">
+                        <div class="space-y-1">
+                            <label for="auth-email" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
+                                Adresse E-mail
+                            </label>
+                            <div class="relative flex items-center">
+                                <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                                <input type="email" id="auth-email" placeholder="artisan@moncommerce.fr" class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="auth-password" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
+                                Mot de passe
+                            </label>
+                            <div class="relative flex items-center">
+                                <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                                <input type="password" id="auth-password" placeholder="••••••••" class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium" />
+                            </div>
+                            <div class="text-right pt-0.5">
+                                <button type="button" id="btn-forgot-password" class="text-[10px] font-semibold text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer">
+                                    Mot de passe oublié ?
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CASE HCAPTCHA OPTIMISÉE SANS DÉBORDEMENT MOBILE -->
+                        <div class="flex justify-center my-2 scale-90 sm:scale-100 overflow-hidden">
+                            <div class="h-captcha" id="auth-captcha" data-sitekey="96a8e4ec-81d0-4b76-a68c-2c2c24ec5200"></div>
+                        </div>
+
+                        <button id="btn-auth-submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <i data-lucide="log-in" class="w-4 h-4" id="btn-auth-icon"></i>
+                            <span id="btn-auth-text">Se connecter à mon espace</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-[10px] text-slate-500 text-center leading-relaxed max-w-[280px] mx-auto">
+                    En vous connectant, vos fiches techniques et ingrédients sont automatiquement chiffrés et sauvegardés dans le Cloud.
+                </p>
+            </section>
+            
+            <!-- ÉCRAN : ONBOARDING -->
+            <section id="screen-onboarding" class="space-y-5 py-2 hidden">
+                <div class="text-center space-y-1.5 px-2">
                     <span class="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block">
                         Assistant de rentabilité
                     </span>
-                    <h2 class="text-2xl font-black text-slate-100 tracking-tight">Ravi de vous rencontrer !</h2>
+                    <h2 class="text-xl font-black text-slate-100 tracking-tight">Ravi de vous rencontrer !</h2>
                     <p id="onboarding-step-subtitle" class="text-xs text-slate-400 font-medium max-w-[280px] mx-auto">
                         Étape 1 : Choisissez votre univers métier pour configurer vos outils.
                     </p>
@@ -144,21 +135,19 @@
 
                 <div id="step-box-commerce" class="space-y-4">
                     <div class="relative w-full overflow-hidden px-1">
-                        <div id="swipe-container" class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 scrollbar-none" style="scrollbar-width: none;"></div>
-                        <div id="swipe-dots" class="flex justify-center items-center gap-2 mt-2"></div>
+                        <div id="swipe-container" class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 scrollbar-none" style="scrollbar-width: none;"></div>
+                        <div id="swipe-dots" class="flex justify-center items-center gap-2 mt-1"></div>
                     </div>
                     
-                    <div class="px-2 pt-2">
-                        <button id="btn-go-products" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-xl text-xs uppercase tracking-wider transition-all duration-300 flex justify-center items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/40 transform active:scale-98">
+                    <div class="px-2">
+                        <button id="btn-go-products" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all flex justify-center items-center gap-2 cursor-pointer shadow-lg active:scale-98">
                             <span>Continuer vers mes produits</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-white">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0l-6 6m6-6H3" />
-                            </svg>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
 
-                <div id="step-box-products" class="bg-gradient-to-b from-slate-800/60 to-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-4 hidden shadow-xl mx-2">
+                <div id="step-box-products" class="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl space-y-4 hidden shadow-xl mx-2">
                     <label class="flex items-center gap-2 text-xs font-black text-slate-300 uppercase tracking-wider">
                         <i data-lucide="shopping-bag" class="w-4 h-4 text-emerald-400"></i> 2. Mes Produits par défaut
                     </label>
@@ -168,24 +157,18 @@
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Un produit manque à la liste ?</p>
                         <div class="flex gap-2">
                             <input type="text" id="onboard-custom-product-input" class="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none transition" placeholder="Ex: Bagels spéciaux">
-                            <button type="button" id="btn-add-custom-product" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 px-4 rounded-xl text-xs font-black cursor-pointer transition">Ajouter</button>
+                            <button type="button" id="btn-add-custom-product" class="bg-slate-800 text-emerald-400 border border-slate-700/50 px-4 rounded-xl text-xs font-black cursor-pointer">Ajouter</button>
                         </div>
                         <div id="onboard-custom-products-tags" class="flex flex-wrap gap-1.5 pt-1"></div>
                     </div>
                     
-                    <div class="flex gap-2 pt-2 text-xs font-bold">
-                        <button id="btn-back-to-commerce" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl cursor-pointer transition flex justify-center items-center gap-1 transform active:scale-98">
-                            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 
-                            <span>Retour</span>
-                        </button>
-                        <button id="btn-go-ingredients" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl cursor-pointer transition uppercase tracking-wider shadow-lg shadow-emerald-950/40 flex justify-center items-center gap-2 transform active:scale-98">
-                            <span>Continuer</span> 
-                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                        </button>
+                    <div class="flex gap-2 pt-1 text-xs font-bold">
+                        <button id="btn-back-to-commerce" class="w-1/3 bg-slate-800 text-slate-300 py-3 rounded-xl cursor-pointer flex justify-center items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span>Retour</span></button>
+                        <button id="btn-go-ingredients" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black py-3 rounded-xl cursor-pointer uppercase tracking-wider flex justify-center items-center gap-2"><span>Continuer</span> <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>
                     </div>
                 </div>
 
-                <div id="step-box-ingredients" class="bg-gradient-to-b from-slate-800/60 to-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-4 hidden shadow-xl mx-2">
+                <div id="step-box-ingredients" class="bg-slate-800/60 border border-slate-800 p-4 rounded-2xl space-y-4 hidden shadow-xl mx-2">
                     <label class="flex items-center gap-2 text-xs font-black text-slate-300 uppercase tracking-wider">
                         <i data-lucide="egg" class="w-4 h-4 text-emerald-400"></i> 3. Mes Matières Premières
                     </label>
@@ -194,69 +177,69 @@
                     <div class="pt-3 border-t border-slate-800 space-y-2">
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Ajouter une autre matière :</p>
                         <div class="grid grid-cols-3 gap-2">
-                            <input type="text" id="onboard-custom-ing-name" class="col-span-2 bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none transition" placeholder="Ex: Safran">
-                            <select id="onboard-custom-ing-unit" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-bold text-slate-300 focus:outline-none"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="u">u</option></select>
+                            <input type="text" id="onboard-custom-ing-name" class="col-span-2 bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none" placeholder="Ex: Safran">
+                            <select id="onboard-custom-ing-unit" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-bold text-slate-300"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="u">u</option></select>
                         </div>
-                        <button type="button" id="btn-add-custom-ingredient" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 py-2 rounded-xl text-xs font-bold cursor-pointer transition">Ajouter cette matière</button>
+                        <button type="button" id="btn-add-custom-ingredient" class="w-full bg-slate-800 text-emerald-400 border border-slate-700/50 py-2.5 rounded-xl text-xs font-bold cursor-pointer">Ajouter cette matière</button>
                         <div id="onboard-custom-ingredients-tags" class="flex flex-wrap gap-1.5 pt-1"></div>
                     </div>
                     
-                    <div class="flex gap-2 pt-2 text-xs font-bold">
-                        <button id="btn-back-to-products" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl cursor-pointer transition flex justify-center items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Retour</button>
-                        <button id="btn-finalize-onboarding" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl cursor-pointer transition uppercase tracking-wider shadow-lg shadow-emerald-950/40 flex justify-center items-center gap-2 transform active:scale-98 text-xs">
-                            <span>Générer mon espace</span>
-                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                        </button>
+                    <div class="flex gap-2 pt-1 text-xs font-bold">
+                        <button id="btn-back-to-products" class="w-1/3 bg-slate-800 text-slate-300 py-3 rounded-xl cursor-pointer flex justify-center items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Retour</button>
+                        <button id="btn-finalize-onboarding" class="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black py-3 rounded-xl cursor-pointer uppercase tracking-wider flex justify-center items-center gap-2 text-xs"><span>Générer mon espace</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>
                     </div>
                 </div>
             </section>
 
+            <!-- ÉCRAN : INGRÉDIENTS (MATIÈRES) -->
             <section id="screen-ingredients" class="space-y-4 hidden">
-                <div class="flex justify-between items-center">
-                    <div><h2 class="text-lg font-bold text-slate-100">Mes Matières Premières</h2><p class="text-xs text-slate-400">Mes prix d'achat de base</p></div>
-                    <button id="btn-add-ingredient" class="bg-emerald-600 text-white text-sm font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Ajouter</button>
+                <div class="flex justify-between items-center px-1">
+                    <div><h2 class="text-base font-bold text-slate-100">Mes Matières Premières</h2><p class="text-[11px] text-slate-400">Prix d'achat unitaire hors taxe</p></div>
+                    <button id="btn-add-ingredient" class="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Ajouter</button>
                 </div>
-                <div id="ingredients-list" class="space-y-2.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0" role="list"></div>
+                <div id="ingredients-list" class="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0" role="list"></div>
             </section>
 
+            <!-- ÉCRAN : CATALOGUE PRODUITS -->
             <section id="screen-products" class="space-y-4 hidden">
-                <div class="flex justify-between items-center">
-                    <div><h2 class="text-lg font-bold text-slate-100">Mon Catalogue Produits</h2><p class="text-xs text-slate-400">Mes coûts de revient et fiches techniques</p></div>
-                    <button id="btn-open-product-modal" class="bg-emerald-600 text-white text-sm font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Créer</button>
+                <div class="flex justify-between items-center px-1">
+                    <div><h2 class="text-base font-bold text-slate-100">Mon Catalogue Produits</h2><p class="text-[11px] text-slate-400">Coûts de revient et fiches techniques</p></div>
+                    <button id="btn-open-product-modal" class="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 cursor-pointer"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Créer</button>
                 </div>
-                <div id="products-list" class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0" role="list"></div>
+                <div id="products-list" class="space-y-2.5 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0" role="list"></div>
             </section>
 
+            <!-- ÉCRAN : SIMULATEUR DE MARGES -->
             <section id="screen-margins" class="space-y-4 hidden">
-                <div><h2 class="text-lg font-bold text-slate-100">Mon Simulateur Opérationnel</h2><p class="text-xs text-slate-400">J'ajuste mes prix face à l'inflation</p></div>
+                <div class="px-1"><h2 class="text-base font-bold text-slate-100">Mon Simulateur Opérationnel</h2><p class="text-[11px] text-slate-400">Ajustement en temps réel face à l'inflation</p></div>
                 
-                <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-3">
-                    <label for="margin-product-select" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Sélectionner un produit :</label>
+                <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2">
+                    <label id="lbl-select-prod" for="margin-product-select" class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Sélectionner un produit :</label>
                     <select id="margin-product-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></select>
                 </div>
                 
                 <div id="simulation-box" class="hidden space-y-4">
                     <div class="space-y-2 bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl">
                         <div class="flex justify-between items-center">
-                            <label for="input-pertes-slider" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Marge de sécurité (Pertes / Invendus) :</label>
-                            <span id="pertes-value" class="text-md font-black text-amber-400 font-mono">0%</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Marge de sécurité (Pertes / Invendus) :</span>
+                            <span id="pertes-value" class="text-sm font-black text-amber-400 font-mono">0%</span>
                         </div>
                         <input id="input-pertes-slider" type="range" min="0" max="30" step="5" value="0" class="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500">
                     </div>
 
                     <div class="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
-                        <button id="btn-mode-a" data-mode="A" class="py-2.5 text-[10px] font-black rounded-lg transition-all cursor-pointer px-1">MODE A : Prix</button>
-                        <button id="btn-mode-b" data-mode="B" class="py-2.5 text-[10px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-1">MODE B : Marge</button>
-                        <button id="btn-mode-c" data-mode="C" class="py-2.5 text-[10px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-1">MODE C : Coeff</button>
+                        <button id="btn-mode-a" data-mode="A" class="py-2.5 text-[9px] font-black rounded-lg transition-all cursor-pointer px-0.5 text-center">MODE A : Prix</button>
+                        <button id="btn-mode-b" data-mode="B" class="py-2.5 text-[9px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-0.5 text-center">MODE B : Marge</button>
+                        <button id="btn-mode-c" data-mode="C" class="py-2.5 text-[9px] font-black rounded-lg transition-all text-slate-400 cursor-pointer px-0.5 text-center">MODE C : Coeff</button>
                     </div>
 
                     <div class="bg-slate-800/40 border border-slate-800 px-4 py-3 rounded-xl flex justify-between items-center">
-                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Coût matière strict :</span>
-                        <span id="sim-cost-display" class="font-mono font-bold text-base text-amber-400">0.00 €</span>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Coût matière strict :</span>
+                        <span id="sim-cost-display" class="font-mono font-bold text-sm text-amber-400">0.00 €</span>
                     </div>
 
                     <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2">
-                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Taux de TVA :</label>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Mon Taux de TVA :</label>
                         <div class="grid grid-cols-3 gap-2">
                             <button data-tva="5.5" class="tva-btn py-2 text-xs font-bold rounded-lg cursor-pointer">5.5 %</button>
                             <button data-tva="10" class="tva-btn py-2 text-xs font-bold rounded-lg cursor-pointer">10 %</button>
@@ -265,191 +248,180 @@
                     </div>
 
                     <div id="inputs-mode-a" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2">
-                        <label for="input-price-ttc" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Prix de Vente Public TTC (€) :</label>
-                        <input type="number" inputmode="decimal" step="0.01" id="input-price-ttc" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-2xl font-black text-slate-100 text-center font-mono focus:outline-none" placeholder="0.00">
+                        <label id="lbl-price-ttc" for="input-price-ttc" class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Prix Public TTC (€) :</label>
+                        <input type="number" inputmode="decimal" step="0.01" id="input-price-ttc" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xl font-black text-slate-100 text-center font-mono focus:outline-none" placeholder="0.00">
                     </div>
 
                     <div id="inputs-mode-b" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2 hidden">
                         <div class="flex justify-between items-center mb-1">
-                            <label for="input-marge-slider" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mon Objectif de Marge Brute :</label>
-                            <span id="slider-value" class="text-md font-black text-emerald-400 font-mono">70%</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Objectif de Marge Brute :</span>
+                            <span id="slider-value" class="text-sm font-black text-emerald-400 font-mono">70%</span>
                         </div>
                         <input type="range" min="0" max="95" value="70" id="input-marge-slider" class="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500">
                     </div>
 
                     <div id="inputs-mode-c" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl space-y-2 hidden">
-                        <label for="input-coeff" class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Coefficient Multiplicateur Cible :</label>
-                        <input type="number" inputmode="decimal" step="0.1" min="1" value="3.5" id="input-coeff" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-2xl font-black text-slate-100 text-center font-mono focus:outline-none">
+                        <label id="lbl-coeff" for="input-coeff" class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Coefficient Cible :</label>
+                        <input type="number" inputmode="decimal" step="0.1" min="1" value="3.5" id="input-coeff" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xl font-black text-slate-100 text-center font-mono focus:outline-none">
                     </div>
 
-                    <div id="result-card" class="p-5 rounded-2xl border transition-all duration-300"></div>
+                    <div id="result-card" class="p-4 rounded-2xl border transition-all duration-300"></div>
                     
-                    <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-2xl flex justify-center max-h-48">
+                    <div class="bg-slate-800/40 border border-slate-800 p-3 rounded-2xl flex justify-center max-h-44">
                         <canvas id="marginChart"></canvas>
                     </div>
                 </div>
             </section>
 
+            <!-- ÉCRAN : CALCULATEUR D'ACHATS (PLANNER) -->
             <section id="screen-planner" class="space-y-4 hidden">
-                <div><h2 class="text-lg font-bold text-slate-100">Mon Calculateur d'Achats</h2><p class="text-xs text-slate-400">Je prépare mes commandes</p></div>
-                <div id="planner-products-inputs" class="space-y-2.5"></div>
-                <button id="btn-generate-shopping" class="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex justify-center items-center gap-2 text-sm cursor-pointer"><i data-lucide="shopping-basket" class="w-4 h-4"></i> Consolider ma liste</button>
+                <div class="px-1"><h2 class="text-base font-bold text-slate-100">Mon Calculateur d'Achats</h2><p class="text-[11px] text-slate-400">Préparation automatique des commandes fournisseurs</p></div>
+                <div id="planner-products-inputs" class="space-y-2"></div>
+                <button id="btn-generate-shopping" class="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex justify-center items-center gap-2 text-xs uppercase tracking-wider cursor-pointer shadow-md"><i data-lucide="shopping-basket" class="w-4 h-4"></i> Consolider ma liste</button>
                 <div id="shopping-list-result" class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-2xl hidden space-y-3">
                     <div class="flex justify-between items-center border-b border-slate-700 pb-2 noprint">
-                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-300">Mes Besoins cumulés :</h3>
-                        <div class="flex gap-2">
-                            <button id="btn-export-pdf" class="bg-slate-700 text-slate-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> PDF</button>
-                            <button id="btn-export-csv" class="bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> CSV</button>
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-300">Besoins cumulés :</h3>
+                        <div class="flex gap-1.5">
+                            <button id="btn-export-pdf" class="bg-slate-700 text-slate-200 text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer">PDF</button>
+                            <button id="btn-export-csv" class="bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer">CSV</button>
                         </div>
                     </div>
-                    <ul id="shopping-items" class="space-y-2" role="list"></ul>
+                    <ul id="shopping-items" class="space-y-1.5 text-xs" role="list"></ul>
                 </div>
             </section>
 
-            <section id="screen-settings" class="hidden max-w-md mx-auto px-4 py-6 space-y-6">
-    <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
-        <div class="p-2 bg-slate-900 rounded-xl border border-slate-800 text-slate-400">
-            <i data-lucide="settings" class="w-5 h-5"></i>
-        </div>
-        <div>
-            <h2 class="text-lg font-black text-slate-100 tracking-wide uppercase text-[13px]">Mon Profil</h2>
-            <p class="text-xs text-slate-500">Modifiez les réglages de votre application sans perdre vos données.</p>
-        </div>
-    </div>
-
-    <div class="space-y-4">
-        <div class="space-y-1.5">
-            <label for="settings-shop-name" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
-                Nom du commerce
-            </label>
-            <div class="relative flex items-center">
-                <i data-lucide="store" class="w-4 h-4 text-slate-500 absolute left-4"></i>
-                <input 
-                    type="text" 
-                    id="settings-shop-name" 
-                    placeholder="Ex: Ma Belle Boulangerie" 
-                    class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
-                />
-            </div>
-        </div>
-
-        <button 
-            id="btn-save-settings" 
-            class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/20 transition-all cursor-pointer mt-6 flex items-center justify-center gap-2"
-        >
-            <i data-lucide="check" class="w-4 h-4"></i>
-            <span>Enregistrer les modifications</span>
-        </button>
-    </div>
-
-    <!-- NOUVEAU BLOC : SÉCURITÉ & COMPTE (MODIFICATION MAIL & MOT DE PASSE) -->
-    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 space-y-5 backdrop-blur-sm mt-6">
-        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400 block pl-1">
-            Sécurité & Compte
-        </span>
-        
-        <!-- Changement Email -->
-        <div class="space-y-1.5">
-            <label for="settings-email" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
-                Changer d'adresse e-mail
-            </label>
-            <div class="flex gap-2">
-                <div class="relative flex items-center flex-1">
-                    <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-4"></i>
-                    <input 
-                        type="email" 
-                        id="settings-email" 
-                        placeholder="Nouvel e-mail" 
-                        class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
-                    />
-                </div>
-                <button id="btn-update-email" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 px-4 rounded-xl text-xs font-bold cursor-pointer transition whitespace-nowrap">
-                    Mettre à jour
-                </button>
-            </div>
-        </div>
-
-        <!-- Changement Mot de passe -->
-        <div class="space-y-1.5 pt-2 border-t border-slate-800/60">
-            <label for="settings-password" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">
-                Changer de mot de passe
-            </label>
-            <div class="relative flex items-center mb-2">
-                <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-4"></i>
-                <input 
-                    type="password" 
-                    id="settings-password" 
-                    placeholder="Nouveau mot de passe (12+ car, Maj, Min, Chiffre)" 
-                    class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-200 placeholder-slate-600 outline-none transition-all font-medium"
-                />
-            </div>
-            <button id="btn-update-password" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/50 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition">
-                Confirmer le nouveau mot de passe
-            </button>
-        </div>
-    </div>
-
-    <div class="border-t border-slate-800/60 my-6 pt-4">
-            <span class="text-[10px] font-black uppercase tracking-widest text-rose-500 block pl-1 mb-3">
-                Zone de danger
-            </span>
-            
-            <button 
-                id="btn-danger-reset" 
-                class="w-full bg-rose-950/30 hover:bg-rose-900/40 text-rose-400 border border-rose-500/20 hover:border-rose-500/40 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                <span>Réinitialiser toute l'application</span>
-            </button>
-        </div>
-        <button id="btn-logout" class="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 py-3 rounded-xl cursor-pointer text-center font-medium transition-all border border-slate-800 flex items-center justify-center gap-2">
-    <i data-lucide="log-out" class="w-4 h-4"></i>
-    <span>Se déconnecter de mon compte</span>
-</button>
-</section>
-        </main>
-
-        <nav id="app-nav" class="sticky bottom-0 left-0 right-0 h-20 bg-slate-950 border-t border-slate-800/80 grid grid-cols-4 items-center justify-center px-2 z-40 hidden" role="navigation">
-            <button data-screen="ingredients" id="nav-ingredients" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="wheat" class="w-5 h-5"></i><span class="text-[10px]">Matières</span></button>
-            <button data-screen="products" id="nav-products" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="shopping-bag" class="w-5 h-5"></i><span class="text-[10px]">Produits</span></button>
-            <button data-screen="margins" id="nav-margins" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="trending-up" class="w-5 h-5"></i><span class="text-[10px]">Marges</span></button>
-            <button data-screen="planner" id="nav-planner" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="truck" class="w-5 h-5"></i><span class="text-[10px]">Achats</span></button>
-        </nav>
-
-        <div id="modal-ingredient" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
-                <h3 id="modal-ingredient-title" class="text-base font-bold text-slate-100 flex items-center gap-2"></h3>
-                <input type="hidden" id="ing-id-field">
-                <div class="space-y-3 text-xs">
-                    <div><label for="ing-name" class="block text-slate-400 font-medium mb-1">Désignation :</label><input type="text" id="ing-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"></div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label for="ing-price" class="block text-slate-400 font-medium mb-1">Prix d'Achat (€) :</label><input type="number" inputmode="decimal" step="0.01" id="ing-price" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-center font-mono focus:outline-none"></div>
-                        <div><label for="ing-qty" class="block text-slate-400 font-medium mb-1">Quantité d'achat :</label><input type="number" inputmode="decimal" step="0.01" id="ing-qty" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-center font-mono focus:outline-none"></div>
+            <!-- ÉCRAN : PARAMÈTRES / MON PROFIL -->
+            <section id="screen-settings" class="hidden max-w-md mx-auto px-1 space-y-5">
+                <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
+                    <div class="p-2 bg-slate-900 rounded-xl border border-slate-800 text-slate-400">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <label for="ing-unit" class="block text-slate-400 font-medium mb-1">Unité de mesure :</label>
-                        <select id="ing-unit" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="u">u</option></select>
+                        <h2 class="text-sm font-black text-slate-100 tracking-wide uppercase">Mon Profil</h2>
+                        <p class="text-[11px] text-slate-500">Modifiez les réglages de votre application sans perdre vos données.</p>
                     </div>
                 </div>
-                <div class="flex gap-2 text-xs font-bold"><button id="btn-cancel-ingredient" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button><button id="btn-save-ingredient" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer</button></div>
-            </div>
-        </div>
 
-        <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
-                <h3 id="modal-product-title" class="text-base font-bold text-slate-100 flex items-center gap-2"></h3>
-                <input type="hidden" id="product-id-field">
-                <div class="space-y-3 text-xs">
-                    <div><label for="product-name" class="block text-slate-400 font-medium mb-1">Nom du produit :</label><input type="text" id="product-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none"></div>
-                    <div class="border-t border-slate-700/80 pt-2"><label class="block text-slate-200 font-bold mb-2 uppercase text-[10px]">Composition :</label><div id="product-ingredients-selector" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div></div>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label for="settings-shop-name" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">Nom du commerce</label>
+                        <div class="relative flex items-center">
+                            <i data-lucide="store" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                            <input type="text" id="settings-shop-name" placeholder="Ex: Ma Belle Boulangerie" class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition-all font-medium" />
+                        </div>
+                    </div>
+
+                    <button id="btn-save-settings" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md cursor-pointer flex items-center justify-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Enregistrer les modifications</span>
+                    </button>
                 </div>
-                <div class="flex gap-2 text-xs font-bold pt-1"><button id="btn-cancel-product" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button><button id="btn-save-product" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer</button></div>
+
+                <!-- BLOC SECURISE : MODIFICATION ACCÈS -->
+                <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 space-y-4 backdrop-blur-sm">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400 block pl-1">Sécurité & Compte</span>
+                    
+                    <div class="space-y-1">
+                        <label for="settings-email" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">Changer d'adresse e-mail</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex items-center flex-1">
+                                <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                                <input type="email" id="settings-email" placeholder="Nouvel e-mail" class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-200 placeholder-slate-600 outline-none transition-all" />
+                            </div>
+                            <button id="btn-update-email" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/50 px-3 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap">Mettre à jour</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1 pt-2 border-t border-slate-800/60">
+                        <label for="settings-password" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block pl-1">Changer de mot de passe</label>
+                        <div class="relative flex items-center mb-2">
+                            <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-4"></i>
+                            <input type="password" id="settings-password" placeholder="Nouveau mot de passe (12+ car)" class="w-full bg-slate-950/60 border border-slate-800 focus:border-emerald-500/50 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-200 placeholder-slate-600 outline-none transition-all" />
+                        </div>
+                        <button id="btn-update-password" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/50 py-2.5 rounded-xl text-xs font-bold cursor-pointer">Confirmer le nouveau mot de passe</button>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800/60 pt-4">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-rose-500 block pl-1 mb-2">Zone de danger</span>
+                    <button id="btn-danger-reset" class="w-full bg-rose-950/30 text-rose-400 border border-rose-500/20 py-3 rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i><span>Réinitialiser toute l'application</span></button>
+                </div>
+                
+                <button id="btn-logout" class="w-full bg-slate-900 text-slate-400 py-3 rounded-xl cursor-pointer text-center font-medium border border-slate-800 flex items-center justify-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i><span>Se déconnecter de mon compte</span></button>
+            </section>
+        </main>
+
+        <!-- NAVIGATION ANCRÉE DE MANIÈRE FLUIDE SUR SMARTPHONE -->
+        <nav id="app-nav" class="fixed bottom-0 left-0 right-0 h-16 bg-slate-950 border-t border-slate-800/80 grid grid-cols-4 items-center justify-center px-2 z-40 hidden" role="navigation">
+            <button data-screen="ingredients" id="nav-ingredients" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="wheat" class="w-4 h-4"></i><span class="text-[9px] font-semibold">Matières</span></button>
+            <button data-screen="products" id="nav-products" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="shopping-bag" class="w-4 h-4"></i><span class="text-[9px] font-semibold">Produits</span></button>
+            <button data-screen="margins" id="nav-margins" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="trending-up" class="w-4 h-4"></i><span class="text-[9px] font-semibold">Marges</span></button>
+            <button data-screen="planner" id="nav-planner" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 cursor-pointer"><i data-lucide="truck" class="w-4 h-4"></i><span class="text-[9px] font-semibold">Achats</span></button>
+        </nav>
+
+        <!-- MODAL RECONSTRUITE ET SÉCURISÉE : GESTION DES INGRÉDIENTS -->
+        <div id="modal-ingredient" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+                <h3 id="modal-ingredient-title" class="text-sm font-bold text-slate-100 flex items-center gap-2">Matière Première</h3>
+                <input type="hidden" id="ing-id-field">
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label for="ing-name" class="block text-slate-400 font-medium mb-1">Désignation :</label>
+                        <input type="text" id="ing-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="ing-price" class="block text-slate-400 font-medium mb-1">Prix d'Achat (€) :</label>
+                            <input type="number" inputmode="decimal" step="0.01" id="ing-price" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none font-mono">
+                        </div>
+                        <div>
+                            <label for="ing-unit" class="block text-slate-400 font-medium mb-1">Unité de base :</label>
+                            <select id="ing-unit" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none font-bold">
+                                <option value="kg">kg</option>
+                                <option value="g">g</option>
+                                <option value="L">L</option>
+                                <option value="u">u</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2 text-xs font-bold">
+                    <button id="btn-close-ing-modal" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Fermer</button>
+                    <button id="btn-save-ingredient" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer</button>
+                </div>
             </div>
         </div>
 
-    </div> 
-    <script type="module" src="./src/store/supabaseClient.js"></script>
-    <script type="module" src="./src/main.js"></script>
+        <!-- MODAL RECONSTRUITE ET SÉCURISÉE : GESTION DES FICHES TECHNIQUES PRODUITS -->
+        <div id="modal-product" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl flex flex-col max-h-[90vh]">
+                <h3 id="modal-product-title" class="text-sm font-bold text-slate-100 flex items-center gap-2">Fiche Technique</h3>
+                <input type="hidden" id="product-id-field">
+                
+                <div class="space-y-3 text-xs overflow-y-auto flex-1 pr-1">
+                    <div>
+                        <label for="product-name" class="block text-slate-400 font-medium mb-1">Nom du produit commercialisé :</label>
+                        <input type="text" id="product-name" placeholder="Ex: Croissant au beurre" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none">
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="block text-slate-400 font-medium">Composition & Grammages :</label>
+                        <div id="product-ingredients-composer" class="space-y-2 max-h-48 overflow-y-auto bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                            <!-- Généré par le JS des composants -->
+                        </div>
+                    </div>
+                </div>
 
+                <div class="flex gap-2 pt-3 border-t border-slate-700/60 text-xs font-bold shrink-0">
+                    <button id="btn-close-product-modal" class="w-1/2 bg-slate-700 text-slate-300 py-2.5 rounded-xl cursor-pointer">Annuler</button>
+                    <button id="btn-save-product" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl cursor-pointer">Enregistrer la fiche</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- INJECTION SÉCURISÉE DU COEUR LOGIQUE DE L'APPLICATION -->
+    <script type="module" src="./src/main.js"></script>
 </body>
 </html>

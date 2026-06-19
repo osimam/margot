@@ -429,11 +429,14 @@ function setupGlobalEvents() {
                     showToast("Connexion réussie !");
                     
                 } else {
-                    // --- TENTATIVE D'INSCRIPTION AVEC JETON CAPTCHA ---
+                    // --- TENTATIVE D'INSCRIPTION AVEC JETON CAPTCHA ET REDIRECTION UNIQUE ---
                     const { data, error } = await supabaseInstance.auth.signUp({
                         email: email,
                         password: password,
-                        options: { captchaToken: captchaToken } // 👈 Transmission du jeton à Supabase
+                        options: { 
+                            captchaToken: captchaToken,
+                            redirectTo: window.location.origin // 🌟 CORRECTION : Force la redirection vers l'adresse exacte d'où est émise la demande !
+                        }
                     });
 
                     if (error) throw error;
