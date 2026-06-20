@@ -616,16 +616,28 @@ async function routeUser() {
             localStorage.setItem('margot_profile_done', 'true');
         }
 
-        // ÉTAPE 2 : Routage vers le bon écran selon l'état du profil mis à jour
+        // ÉTAPE 2 : Routage vers le bon écran selon l'état du profil
         if (AppState.profileConfigured) {
             document.getElementById('app-nav')?.classList.remove('hidden');
             updateHeaderShopName(); 
             switchScreen('products');
         } else {
+            // 🌟 CORRECTIF NOUVEAU COMPTE : On force l'affichage propre de l'onboarding
             document.getElementById('app-nav')?.classList.add('hidden');
+            
+            // On s'assure que le cache local n'est pas pollué par un ancien test
+            localStorage.setItem('margot_profile_done', 'false');
+            AppState.profileConfigured = false;
+
+            // On bascule sur l'onboarding et on initialise le composant
             switchScreen('onboarding');
-            showOnboardingStep(1);
-            initSwipeCommerce();
+            
+            if (typeof showOnboardingStep === 'function') {
+                showOnboardingStep(1); // Force le retour à l'étape 1 (Choix du commerce)
+            }
+            if (typeof initSwipeCommerce === 'function') {
+                initSwipeCommerce(); // Relance les animations/écouteurs de l'onboarding
+            }
         }
 
     } catch (error) {
