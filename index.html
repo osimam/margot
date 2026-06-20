@@ -420,6 +420,14 @@
         </div>
 
     </div>
+    <div id="modal-reset-password" class="hidden fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md">
+        <h3 class="text-lg font-bold text-white mb-2">Nouveau mot de passe</h3>
+        <p class="text-xs text-slate-400 mb-4">Votre mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule et un chiffre.</p>
+        <input type="password" id="input-new-password" class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-3 text-sm mb-4 focus:border-emerald-500 outline-none" placeholder="••••••••••••">
+        <button id="btn-submit-new-password" class="w-full bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl cursor-pointer">Enregistrer le mot de passe</button>
+    </div>
+</div>
 
     <!-- INJECTION SÉCURISÉE DU COEUR LOGIQUE DE L'APPLICATION -->
     <script type="module" src="./src/main.js"></script>

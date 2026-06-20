@@ -489,32 +489,38 @@ async function routeUser() {
 
         // --- NOUVEAU : CAPTURER L'ÉVÉNEMENT DE RÉCUPÉRATION DE MOT DE PASSE (PASSWORD RECOVERY) ---
         supabaseInstance.auth.onAuthStateChange(async (event, session) => {
-            if (event === "PASSWORD_RECOVERY") {
-                const newPassword = prompt("Veuillez saisir votre nouveau mot de passe (12 caractères min, avec Majuscule, Minuscule et Chiffre) :");
-                
-                if (!newPassword) {
-                    alert("Procédure annulée. Le mot de passe n'a pas été modifié.");
-                    return;
-                }
+            // À l'intérieur de routeUser(), dans l'écouteur onAuthStateChange :
+if (event === "PASSWORD_RECOVERY") {
+    // 1. On affiche la modale HTML qu'on vient de créer
+    const modalReset = document.getElementById('modal-reset-password');
+    modalReset?.classList.remove('hidden');
 
-                // Règles strictes Margot
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
-                if (newPassword.length < 12 || !passwordRegex.test(newPassword)) {
-                    alert("Sécurité insuffisante (12 caractères, Maj, Min, Chiffre requis). Le mot de passe n'a pas été modifié. Veuillez recommencer la procédure.");
-                    return;
-                }
+    const btnSubmit = document.getElementById('btn-submit-new-password');
+    
+    // On écoute le clic sur le bouton de validation de la modale
+    btnSubmit.onclick = async () => {
+        const newPassword = document.getElementById('input-new-password')?.value;
+        
+        // Validation des règles Margot (identique à ton code)
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+        if (!newPassword || newPassword.length < 12 || !passwordRegex.test(newPassword)) {
+            alert("Sécurité insuffisante (12 caractères, Maj, Min, Chiffre requis).");
+            return;
+        }
 
-                try {
-                    const { error } = await supabaseInstance.auth.updateUser({ password: newPassword });
-                    if (error) throw error;
-                    
-                    alert("Votre mot de passe a été modifié avec succès ! Vous pouvez maintenant vous connecter.");
-                    await supabaseInstance.auth.signOut();
-                    window.location.reload();
-                } catch (err) {
-                    alert(`Erreur lors de la mise à jour : ${err.message}`);
-                }
-            }
+        try {
+            const { error } = await supabaseInstance.auth.updateUser({ password: newPassword });
+            if (error) throw error;
+            
+            alert("Votre mot de passe a été modifié avec succès !");
+            modalReset?.classList.add('hidden');
+            await supabaseInstance.auth.signOut();
+            window.location.reload();
+        } catch (err) {
+            alert(`Erreur lors de la mise à jour : ${err.message}`);
+        }
+    };
+}
         });
 
         // 1. On demande à Supabase s'il y a une session active
