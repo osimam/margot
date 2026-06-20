@@ -172,7 +172,7 @@ function setupGlobalEvents() {
         });
     }
     
-    // --- NOUVEAU : BOUTON SE DÉCONNECTER (SUPABASE) ---
+    // --- BOUTON SE DÉCONNECTER (SUPABASE & NETTOYAGE GLOBAL) ---
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
         btnLogout.addEventListener('click', async () => {
@@ -181,28 +181,24 @@ function setupGlobalEvents() {
             if (confirmLogout) {
                 const supabaseInstance = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
                 if (supabaseInstance) {
-                    // 1. On ordonne à Supabase de fermer la session Cloud
+                    // 1. Fermeture de la session Cloud chez Supabase
                     await supabaseInstance.auth.signOut();
                 }
 
-                // 2. On nettoie TOUT le cache local pour ne laisser aucune trace sur le navigateur
-                localStorage.clear(); 
+                // 2. Utilisation de la méthode de nettoyage globale et sécurisée
+                AppState.clearAllData(); 
 
-                // 3. On vide instantanément l'état de l'application
-                AppState.ingredients = [];
-                AppState.products = [];
-                AppState.profileConfigured = false;
-                AppState.shopName = "";
-
-                // 4. On masque la navigation et on redirige vers l'écran de connexion
+                // 3. Masquage des éléments d'interface et retour à l'écran de connexion
                 document.getElementById('app-nav')?.classList.add('hidden');
+                updateHeaderShopName(); // Efface le nom du header immédiatement
+                
                 switchScreen('auth');
                 showToast('Vous avez été déconnecté');
             }
         });
     }
 
-    // --- NOUVEAU : RÉINITIALISATION TOTALE ET DESTRUCTIVE ---
+    // --- RÉINITIALISATION TOTALE ET DESTRUCTIVE ---
     const btnDangerReset = document.getElementById('btn-danger-reset');
     if (btnDangerReset) {
         btnDangerReset.addEventListener('click', async () => {
@@ -212,26 +208,15 @@ function setupGlobalEvents() {
             );
 
             if (confirmReset) {
-                // Bloquer explicitement la configuration locale
-                if (typeof AppState.setProfileConfigured === 'function') {
-                    AppState.setProfileConfigured(false);
-                } else {
-                    AppState.profileConfigured = false;
-                }
-                localStorage.setItem('margot_profile_done', 'false'); // 👈 CRUCIAL : Informe le système de bloquer la resync au refresh
+                // 1. Utilisation de la méthode de nettoyage globale
+                AppState.clearAllData();
                 
-                localStorage.removeItem('margot_ingredients');
-                localStorage.removeItem('margot_products');
-                localStorage.removeItem('margot_shop_name');
-
-                // Vider l'état mémoire instantanément
-                AppState.ingredients = [];
-                AppState.products = [];
-                AppState.shopName = "";
-
+                // 2. Informe explicitement le système au prochain démarrage que le profil est détruit
+                localStorage.setItem('margot_profile_done', 'false'); 
+                
+                // 3. Réinitialisation de l'interface
                 document.getElementById('app-nav')?.classList.add('hidden');
-                
-                updateHeaderShopName(); // Nettoie et masque le nom statique
+                updateHeaderShopName(); 
 
                 switchScreen('onboarding');
                 showOnboardingStep(1);

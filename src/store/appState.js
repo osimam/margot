@@ -12,9 +12,10 @@ const Storage = {
 
 export const AppState = {
     // --- 1. ÉTATS DE CONFIGURATION ET FILTRES ---
-    // Par défaut false, mais le routeur principal va le passer à true s'il trouve des données dans le Cloud
     profileConfigured: localStorage.getItem('margot_profile_done') === 'true',
     currentScreen: 'onboarding',
+    // 🌟 Centralisation du nom du commerce dans l'état global
+    shopName: localStorage.getItem('margot_shop_name') || "",
     
     // --- 2. ÉTATS TEMPORAIRES (ONBOARDING) ---
     onboardSelectedJobId: null,
@@ -55,9 +56,15 @@ export const AppState = {
         return Math.round(totalCents);
     },
 
+    // 🌟 NETTOYAGE COMPLET ET SÉCURISÉ (Aucun résidu en mémoire vive)
     clearAllData() {
+        // 1. Vide le disque dur local du navigateur (Cache)
         localStorage.clear();
+        
+        // 2. Vide intégralement la mémoire vive de l'application (Variables)
         this.profileConfigured = false;
+        this.currentScreen = 'auth';
+        this.shopName = "";
         this.onboardSelectedJobId = null;
         this.onboardCustomProducts = [];
         this.onboardCustomIngredients = [];
